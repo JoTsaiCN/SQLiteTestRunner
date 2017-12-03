@@ -86,9 +86,9 @@ html_template = r"""<!DOCTYPE html>
         hour_gap = 60 * minute_gap
         day_gap = 24 * hour_gap
         days = Math.floor(duration_num / day_gap);
-        hours = Math.floor((duration_num - days * day_gap) / hour_gap);
-        minutes = Math.floor((duration_num - days * day_gap - hours * hour_gap) / minute_gap);
-        seconds = Math.floor((duration_num - days * day_gap - hours * hour_gap - minutes * minute_gap) / second_gap);
+        hours = Math.floor((duration_num %% day_gap) / hour_gap);
+        minutes = Math.floor((duration_num %% hour_gap) / minute_gap);
+        seconds = Math.floor((duration_num %% minute_gap) / second_gap);
         micro_seconds = duration_num %% 1000;
         duration_str = '';
         if (days > 0) duration_str += days + 'd';
@@ -295,25 +295,25 @@ html_template = r"""<!DOCTYPE html>
         var case_result = document.createElement('td');
         case_result.colSpan = 5;
         case_result.align = 'center';
-        var case_log_link = document.createElement('a')
-        case_log_link.innerHTML = row[result];
-        case_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", "'
-                             + row[method] + '", "' + row[start] + '", "' + row[end] + '")';
-        case_result.appendChild(case_log_link);
+        var case_modify_link = document.createElement('a')
+        case_modify_link.innerHTML = row[result];
+        case_modify_link.href = 'javascript:showModify("' + row[module] + '", "' +
+                             row[case_class] + '", "' + row[method] + '")';
+        case_result.appendChild(case_modify_link);
         var duration = document.createElement('td');
         duration.innerHTML = calculateDuration(row[start], row[end]);
-        var case_modify = document.createElement('td');
-        case_modify.align = 'center';
-        var case_modify_link = document.createElement('a')
-        case_modify_link.innerHTML = 'Modify';
-        case_modify_link.href = 'javascript:showModify("' + row[module] + '", "' +
-                                row[case_class] + '", "' + row[method] + '")';
-        case_modify.appendChild(case_modify_link);
+        var case_log_td = document.createElement('td');
+        case_log_td.align = 'center';
+        var case_log_link = document.createElement('a')
+        case_log_link.innerHTML = 'View Log';
+        case_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", "'
+                             + row[method] + '", "' + row[start] + '", "' + row[end] + '")';
+        case_log_td.appendChild(case_log_link);
 
         tr.appendChild(name);
         tr.appendChild(case_result);
         tr.appendChild(duration);
-        tr.appendChild(case_modify);
+        tr.appendChild(case_log_td);
 
         if (row[result] == 'Error') {
             tr.className = 'errorCase';
@@ -359,34 +359,43 @@ html_template = r"""<!DOCTYPE html>
         });
     }
 
+    function getLogStringLines(sql_result) {
+        var log_arr = new Array();
+        for(var i=0; i<sql_result[0].values.length; i++){
+            if (sql_result[0].values[i][exception] !== null && sql_result[0].values[i][exception] !== '') {
+                log_arr.push(sql_result[0].values[i][logtime] + '-[' +
+                                sql_result[0].values[i][loglevel] + '][' +
+                                sql_result[0].values[i][logmodule] + '] ' +
+                                sql_result[0].values[i][logmessage] + ', ' +
+                                sql_result[0].values[i][exception]);
+            } else {
+                log_arr.push(sql_result[0].values[i][logtime] + '-[' +
+                                sql_result[0].values[i][loglevel] + '][' +
+                                sql_result[0].values[i][logmodule] + '] ' +
+                                sql_result[0].values[i][logmessage]);
+            }
+        }
+        return log_arr;
+    }
+
     function generateLog(start, end, gap_start, gap_end) {
         loadBinaryFile(log_db, function(data){
             var db = new SQL.Database(data);
             var sql_result = null;
             // Database is ready
             if (gap_start !== null && gap_end !== null) {
-                sql_result = db.exec("SELECT * FROM log WHERE (Timestamp >= " + new Date(start).getTime() +
-                                     " AND Timestamp < " + new Date(gap_start).getTime() +
-                                     ") OR (Timestamp > " + new Date(gap_end).getTime() +
-                                     " AND Timestamp <= " + new Date(end).getTime() + ")");
+                sql_result_begin = db.exec("SELECT * FROM log WHERE Timestamp >= " + new Date(start).getTime() +
+                                           " AND Timestamp < " + new Date(gap_start).getTime());
+                sql_result_end = db.exec("SELECT * FROM log WHERE Timestamp > " + new Date(gap_end).getTime() +
+                                         " AND Timestamp <= " + new Date(end).getTime());
+                log_arr_start = getLogStringLines(sql_result_begin);
+                log_arr_start.push("...\n    Test Case Running\n...");
+                log_arr_end = getLogStringLines(sql_result_end)
+                log_arr = log_arr_start.concat(log_arr_end);
             } else {
                 sql_result = db.exec("SELECT * FROM log WHERE Timestamp >= " + new Date(start).getTime() +
                                      " AND Timestamp <= " + new Date(end).getTime());
-            }
-            var log_arr = new Array();
-            for(var i=0; i<sql_result[0].values.length; i++){
-                if (sql_result[0].values[i][exception] !== null && sql_result[0].values[i][exception] !== '') {
-                    log_arr.push(sql_result[0].values[i][logtime] + '-[' +
-                                 sql_result[0].values[i][loglevel] + '][' +
-                                 sql_result[0].values[i][logmodule] + '] ' +
-                                 sql_result[0].values[i][logmessage] + ', ' +
-                                 sql_result[0].values[i][exception]);
-                } else {
-                    log_arr.push(sql_result[0].values[i][logtime] + '-[' +
-                                 sql_result[0].values[i][loglevel] + '][' +
-                                 sql_result[0].values[i][logmodule] + '] ' +
-                                 sql_result[0].values[i][logmessage]);
-                }
+                log_arr = getLogStringLines(sql_result);
             }
             document.getElementById('log_content').innerHTML = log_arr.join('\n');
         });
@@ -581,7 +590,7 @@ html_template = r"""<!DOCTYPE html>
                         <th>Error</th>
                         <th>Skip</th>
                         <th>Duration</th>
-                        <th>Modify</th>
+                        <th>Log</th>
                     </tr>
                 </thead>
             </table>
