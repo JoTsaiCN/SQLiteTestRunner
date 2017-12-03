@@ -12,4 +12,9 @@ Clone this repository and run the command below in your terminal:
 
 ## Usage:
 
-There are two examples in `tests/case_one.py` and `tests/test_SQLiteTestRunner.py`
+There are two examples in `tests/case_one.py` and `tests/test_SQLiteTestRunner.py`.
+
+
+## Test Result:
+
+Click [this link](https://cdn.rawgit.com/JoTsaiCN/SQLiteTestRunner/master/tests/test_report.html) to view test report of example in `tests/test_SQLiteTestRunner.py` online.
