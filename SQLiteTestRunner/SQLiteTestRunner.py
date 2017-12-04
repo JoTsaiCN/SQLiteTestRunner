@@ -55,7 +55,7 @@ class SQLiteHandler(logging.Handler):
 
 html_template = r"""<!DOCTYPE html>
 <html lang="en">
-<script src="https://rawgit.com/kripken/sql.js/master/js/sql.js"></script>
+<script src="https://rawgit.com/kripken/sql.js/master/js/sql-memory-growth.js"></script>
 <script language="javascript" type="text/javascript">
     result_db = "%(reportdb)s";
     log_db = "%(logdb)s";
@@ -80,6 +80,12 @@ html_template = r"""<!DOCTYPE html>
 
 
     function calculateDuration(start, end) {
+        if(start === null) {
+            return 'Not Execute';
+        }
+        if(end === null) {
+            return 'Interruption';
+        }
         duration_num = new Date(end) - new Date(start);
         second_gap = 1000
         minute_gap = 60 * second_gap
@@ -124,6 +130,51 @@ html_template = r"""<!DOCTYPE html>
             datatable.removeChild(datatable.childNodes[i]);
         }
     }
+
+    function showStatusCase(case_result) {
+        case_list = document.getElementsByClassName(case_result.toLowerCase() + 'Case');
+        for(var i=0; i<case_list.length; i++) {
+            case_list[i].style.display = "";
+        }
+        button = document.getElementById(case_result.toLowerCase() + 'Button');
+        button.className = case_result.toLowerCase() + 'Button';
+        document.getElementById('allButton').className = 'allButton';
+    }
+
+    function hideStatusCase(case_result) {
+        case_list = document.getElementsByClassName(case_result + 'Case');
+        for(var i=0; i<case_list.length; i++) {
+            case_list[i].style.display = 'none';
+        }
+        button = document.getElementById(case_result.toLowerCase() + 'Button');
+        button.className = 'disableButton';
+        if(document.getElementsByClassName('disableButton').length == 4) {
+            document.getElementById('allButton').className = 'disableButton';
+        }
+    }
+
+    function changeCaseDisplay(case_result) {
+        if(case_result.toLowerCase() == 'all'){
+            button = document.getElementById('allButton');
+            if(button.className == 'disableButton') {
+                showStatusCase('error');
+                showStatusCase('fail');
+                showStatusCase('skip');
+                showStatusCase('pass');
+            } else {
+                hideStatusCase('error');
+                hideStatusCase('fail');
+                hideStatusCase('skip');
+                hideStatusCase('pass');
+            }
+        } else {
+            if(document.getElementById(case_result.toLowerCase() + 'Button').className == 'disableButton') {
+                showStatusCase(case_result.toLowerCase());
+            } else {
+                hideStatusCase(case_result.toLowerCase());
+            }
+        }
+    }
     
     function getModuleResultCount(module, count, pass, failed, error, skip, tr){
         loadBinaryFile(result_db, function(data){
@@ -132,7 +183,8 @@ html_template = r"""<!DOCTYPE html>
             var sql_result = db.exec("SELECT result, COUNT(*) AS count FROM testcase " +
                                      "WHERE module='" + module + "' " + "AND class IS NOT NULL " +
                                      "AND method IS NOT NULL GROUP BY result");
-            result_count = 0
+            result_count = 0;
+            error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
                  if (sql_result[0].values[i][0] == 'Pass') {
                     pass.innerHTML = sql_result[0].values[i][1];
@@ -140,13 +192,16 @@ html_template = r"""<!DOCTYPE html>
                  if (sql_result[0].values[i][0] == 'Skip') {
                     skip.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Failure') {
+                 if (sql_result[0].values[i][0] == 'Fail') {
                     failed.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Error') {
-                    error.innerHTML = sql_result[0].values[i][1];
+                 if (sql_result[0].values[i][0] == 'Error' || sql_result[0].values[i][0] === null) {
+                    error.innerHTML += sql_result[0].values[i][1];
                  }
                  result_count += sql_result[0].values[i][1];
+            }
+            if (error_count > 0) {
+                error.innerHTML = error_count;
             }
             if (error.innerHTML !== null && error.innerHTML !== '') {
                 tr.className = 'errorModule';
@@ -168,7 +223,8 @@ html_template = r"""<!DOCTYPE html>
             var sql_result = db.exec("SELECT result, COUNT(*) AS count FROM testcase " +
                                      "WHERE module='" + module + "' " + "AND class='" + case_class + "' " +
                                      "AND method IS NOT NULL GROUP BY result");
-            result_count = 0
+            result_count = 0;
+            error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
                  if (sql_result[0].values[i][0] == 'Pass') {
                     pass.innerHTML = sql_result[0].values[i][1];
@@ -176,13 +232,16 @@ html_template = r"""<!DOCTYPE html>
                  if (sql_result[0].values[i][0] == 'Skip') {
                     skip.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Failure') {
+                 if (sql_result[0].values[i][0] == 'Fail') {
                     failed.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Error') {
-                    error.innerHTML = sql_result[0].values[i][1];
+                 if (sql_result[0].values[i][0] == 'Error' || sql_result[0].values[i][0] == 'Error') {
+                    error_count += sql_result[0].values[i][1];
                  }
                  result_count += sql_result[0].values[i][1];
+            }
+            if (error_count > 0) {
+                error.innerHTML = error_count;
             }
             if (error.innerHTML !== null && error.innerHTML !== '') {
                 tr.className = 'errorClass';
@@ -212,13 +271,38 @@ html_template = r"""<!DOCTYPE html>
             var sql_result = db.exec("SELECT result, COUNT(*) AS count FROM testcase " +
                                      "WHERE module IS NOT NULL AND class IS NOT NULL " +
                                      "AND method IS NOT NULL GROUP BY result");
-            var status_arr = new Array()
-            result_count = 0
+            var status_arr = new Array();
+            result_count = 0;
+            error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
-                status_arr.push(sql_result[0].values[i][0] + ' ' + sql_result[0].values[i][1])
+                if (sql_result[0].values[i][0] == 'Error' || sql_result[0].values[i][0] === null) {
+                    error_count += sql_result[0].values[i][1];
+                } else {
+                    status_arr.push(sql_result[0].values[i][0] + ' ' + sql_result[0].values[i][1]);
+                }
                 result_count += sql_result[0].values[i][1];
             }
-            document.getElementById('Status').innerHTML += 'Total ' + result_count + ', ' + status_arr.join(', ');
+            if(error_count > 0) {
+                status_arr.push('Error ' + error_count);
+            }
+            button = document.createElement('input');
+            button.type = 'button';
+            button.id = 'allButton';
+            button.className = 'allButton';
+            button.value = 'Total ' + result_count;
+            button.onclick = Function("changeCaseDisplay('All');");
+            document.getElementById('Status').appendChild(button);
+            for(var i=0; i<status_arr.length; i++) {
+                button = document.createElement('input');
+                button.id = status_arr[i].split(' ')[0].toLowerCase() + 'Button';
+                button.className = status_arr[i].split(' ')[0].toLowerCase() + 'Button';
+                button.type = 'button';
+                button.value = status_arr[i];
+                button.onclick = Function("changeCaseDisplay('" + status_arr[i].split(' ')[0] + "');");
+                document.getElementById('Status').appendChild(button);
+            }
+            hideStatusCase('pass');
+            hideStatusCase('skip');
         });
     }
     
@@ -317,7 +401,7 @@ html_template = r"""<!DOCTYPE html>
 
         if (row[result] == 'Error') {
             tr.className = 'errorCase';
-        } else if (row[result] == 'Failure') {
+        } else if (row[result] == 'Fail') {
             tr.className = 'failCase';
         } else if (row[result] == 'Skip') {
             tr.className = 'skipCase';
@@ -455,7 +539,7 @@ html_template = r"""<!DOCTYPE html>
     <title>Test Report</title>
     <style type="text/css" media="screen">
         body        { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 80%%; }
-        table       { font-size: 100%%; }
+        table       { font-size: 100%%; table-layout:fixed; }
         pre         { margin-left: 20px; font-size: 12px; line-height: 20px; }
 
         /* -- heading ---------------------------------------------------------------------- */
@@ -527,6 +611,13 @@ html_template = r"""<!DOCTYPE html>
         .hiddenRow  { display: none; }
         .testcase   { margin-left: 2em; }
 
+        .errorButton { background-color: #c0392b; border: 1px solid; color: white;}
+        .failButton { background-color: #f39c12; border: 1px solid; color: white; }
+        .skipButton { background-color: #2980b9; border: 1px solid; color: white; }
+        .passButton {background-color: #27ae60; border: 1px solid; color: white; }
+        .allButton { background-color: #34495e; border: 1px solid; color: white; }
+        .disableButton { background-color: #eaeded; border: 1px solid; color: #34495e; border-color: white }
+
         .table-head {
             padding-right:17px;
             background-color:#34495e;
@@ -550,6 +641,10 @@ html_template = r"""<!DOCTYPE html>
         .table-body td {
             border: 1px solid #34495e;
             padding: 2px;
+            word-break:keep-all;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
         }
         .table-body td:nth-child(n+2) {
             text-align: center;
@@ -730,7 +825,7 @@ class SQLiteTestResult(unittest.TestResult):
 
     def addFailure(self, test, err):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Failure', end=True, msg=self._exc_info_to_string(err, test))
+                         result='Fail', end=True, msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addFailure(test, err)
 
     def addSkip(self, test, reason):
@@ -740,7 +835,7 @@ class SQLiteTestResult(unittest.TestResult):
 
     def addExpectedFailure(self, test, err):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Failure', end=True, msg=self._exc_info_to_string(err, test))
+                         result='Fail', end=True, msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addExpectedFailure(test, err)
 
     def addUnexpectedSuccess(self, test):
