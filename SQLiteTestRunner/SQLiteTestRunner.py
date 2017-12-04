@@ -138,7 +138,9 @@ html_template = r"""<!DOCTYPE html>
         }
         button = document.getElementById(case_result.toLowerCase() + 'Button');
         button.className = case_result.toLowerCase() + 'Button';
-        document.getElementById('allButton').className = 'allButton';
+        if(document.getElementsByClassName('disableButton').length == 1) {
+            document.getElementById('allButton').className = 'allButton';
+        }
     }
 
     function hideStatusCase(case_result) {
@@ -148,9 +150,7 @@ html_template = r"""<!DOCTYPE html>
         }
         button = document.getElementById(case_result.toLowerCase() + 'Button');
         button.className = 'disableButton';
-        if(document.getElementsByClassName('disableButton').length == 4) {
-            document.getElementById('allButton').className = 'disableButton';
-        }
+        document.getElementById('allButton').className = 'disableButton';
     }
 
     function changeCaseDisplay(case_result) {
@@ -626,7 +626,7 @@ html_template = r"""<!DOCTYPE html>
             font-weight: bold;
             font-size: 15px;
             color: white;
-            padding: 0px;
+            padding: 2px;
             height: 30px;
             vertical-align: middle;
             text-align: left;
@@ -639,7 +639,7 @@ html_template = r"""<!DOCTYPE html>
             overflow-y: scroll;
         }
         .table-body td {
-            border: 1px solid #34495e;
+            border: 1px solid #eaeded;
             padding: 2px;
             word-break:keep-all;
             white-space:nowrap;
