@@ -3,7 +3,6 @@
 <script src="https://rawgit.com/kripken/sql.js/master/js/sql-memory-growth.js"></script>
 <script language="javascript" type="text/javascript">
     result_db = "test_result.db";
-    log_db = "test_log.db";
     // result_table
     id = 0;
     module = 1;
@@ -14,15 +13,7 @@
     message = 6;
     start = 7;
     end = 8;
-    // log_table
-    logtime = 0;
-    loglevel = 1;
-    logmessage = 2;
-    logmodule = 3;
-    lineno = 4;
-    exception = 5;
-    timestamp = 6;
-
+    logs = 9;
 
     function calculateDuration(start, end) {
         if(start === null) {
@@ -50,7 +41,6 @@
         if (micro_seconds == 0 && duration_str == '') duration_str = '<1ms';
         return duration_str
     }
-
 
     function loadBinaryFile(db_path, success) {
         var xhr = new XMLHttpRequest();
@@ -81,10 +71,12 @@
         for(var i=0; i<case_list.length; i++) {
             case_list[i].style.display = "";
         }
-        button = document.getElementById(case_result.toLowerCase() + 'Button');
-        button.className = case_result.toLowerCase() + 'Button';
-        if(document.getElementsByClassName('disableButton').length == 1) {
-            document.getElementById('allButton').className = 'allButton';
+        if(case_list.length > 0) {
+            button = document.getElementById(case_result.toLowerCase() + 'Button');
+            button.className = case_result.toLowerCase() + 'Button';
+            if(document.getElementsByClassName('disableButton').length == 1) {
+                document.getElementById('allButton').className = 'allButton';
+            }
         }
     }
 
@@ -93,9 +85,11 @@
         for(var i=0; i<case_list.length; i++) {
             case_list[i].style.display = 'none';
         }
-        button = document.getElementById(case_result.toLowerCase() + 'Button');
-        button.className = 'disableButton';
-        document.getElementById('allButton').className = 'disableButton';
+        if(case_list.length > 0) {
+            button = document.getElementById(case_result.toLowerCase() + 'Button');
+            button.className = 'disableButton';
+            document.getElementById('allButton').className = 'disableButton';
+        }
     }
 
     function changeCaseDisplay(case_result) {
@@ -254,7 +248,11 @@
     function showModule(row){
         var tr = document.createElement('tr');
         var mod_name = document.createElement('td');
-        mod_name.innerHTML = row[module];
+        if (row[desc] !== null) {
+            mod_name.innerHTML = row[module] + ': ' + row[desc];
+        } else {
+            mod_name.innerHTML = row[module];
+        }
         var count = document.createElement('td');
         var pass = document.createElement('td');
         var failed = document.createElement('td');
@@ -285,7 +283,11 @@
     function showClass(row){
         var tr = document.createElement('tr');
         var cls_name = document.createElement('td');
-        cls_name.innerHTML = row[module] + '.' + row[case_class];
+        if (row[desc] !== null) {
+            cls_name.innerHTML = row[module] + '.' + row[case_class] + ': ' + row[desc];
+        } else {
+            cls_name.innerHTML = row[module] + '.' + row[case_class];
+        }
         var count = document.createElement('td');
         var pass = document.createElement('td');
         var failed = document.createElement('td');
@@ -316,6 +318,7 @@
     function showCase(row){
         var tr = document.createElement('tr');
         var name = document.createElement('td');
+        name.style.paddingLeft = '10px';
         if (row[desc] !== null) {
             name.innerHTML = row[method] + ': ' + row[desc];
         } else {
@@ -373,7 +376,6 @@
         }
     }
 
-
     function showAllData(){
         resultDiv = document.getElementById('result_div');
         resultDiv.style.height = (window.innerHeight - resultDiv.getBoundingClientRect()['y'] - 20) + 'px';
@@ -388,48 +390,6 @@
         });
     }
 
-    function getLogStringLines(sql_result) {
-        var log_arr = new Array();
-        for(var i=0; i<sql_result[0].values.length; i++){
-            if (sql_result[0].values[i][exception] !== null && sql_result[0].values[i][exception] !== '') {
-                log_arr.push(sql_result[0].values[i][logtime] + '-[' +
-                                sql_result[0].values[i][loglevel] + '][' +
-                                sql_result[0].values[i][logmodule] + '] ' +
-                                sql_result[0].values[i][logmessage] + ', ' +
-                                sql_result[0].values[i][exception]);
-            } else {
-                log_arr.push(sql_result[0].values[i][logtime] + '-[' +
-                                sql_result[0].values[i][loglevel] + '][' +
-                                sql_result[0].values[i][logmodule] + '] ' +
-                                sql_result[0].values[i][logmessage]);
-            }
-        }
-        return log_arr;
-    }
-
-    function generateLog(start, end, gap_start, gap_end) {
-        loadBinaryFile(log_db, function(data){
-            var db = new SQL.Database(data);
-            var sql_result = null;
-            // Database is ready
-            if (gap_start !== null && gap_end !== null) {
-                sql_result_begin = db.exec("SELECT * FROM log WHERE Timestamp >= " + new Date(start).getTime() +
-                                           " AND Timestamp < " + new Date(gap_start).getTime());
-                sql_result_end = db.exec("SELECT * FROM log WHERE Timestamp > " + new Date(gap_end).getTime() +
-                                         " AND Timestamp <= " + new Date(end).getTime());
-                log_arr_start = getLogStringLines(sql_result_begin);
-                log_arr_start.push("...\n    Test Case Running\n...");
-                log_arr_end = getLogStringLines(sql_result_end)
-                log_arr = log_arr_start.concat(log_arr_end);
-            } else {
-                sql_result = db.exec("SELECT * FROM log WHERE Timestamp >= " + new Date(start).getTime() +
-                                     " AND Timestamp <= " + new Date(end).getTime());
-                log_arr = getLogStringLines(sql_result);
-            }
-            document.getElementById('log_content').innerHTML = log_arr.join('\n');
-        });
-    }
-
     function showLog(module_str, class_str, method_str, case_start, case_stop) {
         document.getElementById('log_content').innerHTML = '';
         document.getElementById('logDiv').style.display = 'block';
@@ -440,20 +400,22 @@
         loadBinaryFile(result_db, function(data){
             var db = new SQL.Database(data);
             // Database is ready
-            if (class_str === null) {
+            if (method_str === null) {
                 document.getElementById('log_title').innerHTML = 'Log: ' + module_str;
-                var sql_result = db.exec("SELECT MIN(startTime) AS min_start, MAX(endTime) AS max_end FROM testcase " +
-                                         "WHERE module='" + module_str + "' AND class IS NOT NULL");
-                generateLog(case_start, case_stop, sql_result[0].values[0][0], sql_result[0].values[0][1])
-            } else if (method_str === null) {
+                sql_result = db.exec("SELECT logs FROM testcase " +
+                                         "WHERE module='" + module_str + "' AND class IS NULL AND method IS NULL");
+            } else if (class_str === null) {
                 document.getElementById('log_title').innerHTML = 'Log: ' + module_str + '.' + class_str;
-                var sql_result = db.exec("SELECT MIN(startTime) AS min_start, MAX(endTime) AS max_end FROM testcase " +
-                                         "WHERE module='" + module_str + "' AND class='" + class_str + "' AND method IS NOT NULL");
-                generateLog(case_start, case_stop, sql_result[0].values[0][0], sql_result[0].values[0][1])
+                sql_result = db.exec("SELECT logs FROM testcase " +
+                                     "WHERE module='" + module_str + "' AND class='" + class_str + 
+                                     "' AND method IS NULL");
             } else {
                 document.getElementById('log_title').innerHTML = 'Log: ' + module_str + '.' + class_str + '.' + method_str;
-                generateLog(case_start, case_stop, null, null);
+                sql_result = db.exec("SELECT logs FROM testcase " +
+                                     "WHERE module='" + module_str + "' AND class='" + class_str + 
+                                     "' AND method='" + method_str + "'");
             }
+            document.getElementById('log_content').innerHTML = sql_result[0].values[0][0];
         });
         showMask();
     }

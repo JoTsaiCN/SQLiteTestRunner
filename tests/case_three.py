@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+""" Example test module three. """
 from unittest import TestCase
 import logging
 
@@ -14,7 +15,7 @@ def tearDownModule():
 
 
 class TestStringMethods(TestCase):
-    """ Example test. """
+    """ Example test three. """
 
     def test_upper(self):
         self.assertEqual('foo'.upper(), 'FOO')

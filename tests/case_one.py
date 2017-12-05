@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+""" Example test module one. """
+import logging
 import unittest
 from unittest import TestCase
-import logging
-from logging import config
+
 from SQLiteTestRunner import SQLiteTestRunner
 
 logger = logging.getLogger()
@@ -17,7 +18,7 @@ def tearDownModule():
 
 
 class TestStringMethods(TestCase):
-    """ Example test. """
+    """ Example test one. """
 
     def test_upper(self):
         self.assertEqual('foo'.upper(), 'FOO')
@@ -68,5 +69,5 @@ class TestStringMethodsTwo(TestCase):
 
 
 if __name__ == '__main__':
-    logging.config.fileConfig('./logging_config.ini', defaults={'logfilepath': 'test.log', 'logdbpath': 'test_log.db'})
-    unittest.main(testRunner=SQLiteTestRunner(db='test_result.db', html='test_report.html', descriptions='Test Report'))
+    unittest.main(testRunner=SQLiteTestRunner(
+        db='test_result.db', html='test_report.html', descriptions='Test Report'))
