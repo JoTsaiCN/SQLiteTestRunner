@@ -208,7 +208,7 @@ html_template = r"""<!DOCTYPE html>
     }
 
     function showResult(row){
-        document.getElementsByTagName('title')[0].innerHTML = row[desc];
+        document.title = row[desc];
         document.getElementById('title').innerHTML =  row[desc];
         start_time = document.getElementById('StartTime');
         start_time.innerHTML += row[start];
@@ -276,8 +276,7 @@ html_template = r"""<!DOCTYPE html>
         var mod_modify = document.createElement('td');
         var mod_log_link = document.createElement('a')
         mod_log_link.innerHTML = 'View Log';
-        mod_log_link.href = 'javascript:showLog("' + row[module] + '", null, null, "' + 
-                            row[start] + '", "' + row[end] + '")';
+        mod_log_link.href = 'javascript:showLog("' + row[module] + '", null, null)';
         mod_modify.appendChild(mod_log_link);
 
         tr.appendChild(mod_name);
@@ -311,8 +310,7 @@ html_template = r"""<!DOCTYPE html>
         var cls_modify = document.createElement('td');
         var cls_log_link = document.createElement('a')
         cls_log_link.innerHTML = 'View Log';
-        cls_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", null, "' + 
-                            row[start] + '", "' + row[end] + '")';
+        cls_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", null)';
         cls_modify.appendChild(cls_log_link);
 
         tr.appendChild(cls_name);
@@ -350,8 +348,8 @@ html_template = r"""<!DOCTYPE html>
         case_log_td.align = 'center';
         var case_log_link = document.createElement('a')
         case_log_link.innerHTML = 'View Log';
-        case_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", "'
-                             + row[method] + '", "' + row[start] + '", "' + row[end] + '")';
+        case_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", "' 
+                             + row[method] + '")';
         case_log_td.appendChild(case_log_link);
 
         tr.appendChild(name);
@@ -402,7 +400,7 @@ html_template = r"""<!DOCTYPE html>
         });
     }
 
-    function showLog(module_str, class_str, method_str, case_start, case_stop) {
+    function showLog(module_str, class_str, method_str) {
         document.getElementById('log_content').innerHTML = '';
         document.getElementById('logDiv').style.display = 'block';
         document.getElementById('case_log').style.height = (
@@ -412,11 +410,14 @@ html_template = r"""<!DOCTYPE html>
         loadBinaryFile(result_db, function(data){
             var db = new SQL.Database(data);
             // Database is ready
-            if (method_str === null) {
+            if (module_str === null) {
+                document.getElementById('log_title').innerHTML = 'Log: ' + document.title;
+                sql_result = db.exec("SELECT logs FROM testcase WHERE module IS NULL AND class IS NULL AND method IS NULL");
+            } else if (class_str === null) {
                 document.getElementById('log_title').innerHTML = 'Log: ' + module_str;
                 sql_result = db.exec("SELECT logs FROM testcase " +
                                          "WHERE module='" + module_str + "' AND class IS NULL AND method IS NULL");
-            } else if (class_str === null) {
+            } else if (method_str === null) {
                 document.getElementById('log_title').innerHTML = 'Log: ' + module_str + '.' + class_str;
                 sql_result = db.exec("SELECT logs FROM testcase " +
                                      "WHERE module='" + module_str + "' AND class='" + class_str + 
@@ -457,16 +458,16 @@ html_template = r"""<!DOCTYPE html>
     <meta charset="UTF-8">
     <title>Test Report</title>
     <style type="text/css" media="screen">
-        body        { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 80%%; }
-        table       { font-size: 100%%; table-layout:fixed; }
-        pre         { margin-left: 20px; font-size: 12px; line-height: 20px; }
+        body        { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+        table       { table-layout:fixed; }
+        pre         { margin-left: 20px; line-height: 200%%; white-space: pre-wrap; word-wrap: break-word; }
+        input       { font-size: 100%%; }
 
         /* -- heading ---------------------------------------------------------------------- */
-        h1                   { font-size: 16pt; color: #34495e; }
+        h1                   { font-size: 150%%; color: #34495e; }
         .heading             { margin-top: 0ex; margin-bottom: 1ex; }
         .heading.attribute   { margin-top: 1ex; margin-bottom: 0; }
         .heading.description { margin-top: 4ex; margin-bottom: 6ex; }
-        pre                  { white-space: pre-wrap; word-wrap: break-word; }
 
         /* -- css div popup ----------------------------------------------------------------- */
         .popDiv {
@@ -497,7 +498,7 @@ html_template = r"""<!DOCTYPE html>
             background-color:#2c3e50;
             text-align: center;
             vertical-align: middle;
-            font-size: 20px;
+            font-size: 120%%;
             font-weight: bold;
             color: white;
         }
@@ -508,7 +509,7 @@ html_template = r"""<!DOCTYPE html>
         }
         .divTitle{
             color: white;
-            font-size: 20px;
+            font-size: 120%%;
             font-weight: bold;
             line-height: 40px;
             margin-left: 10px;
@@ -527,8 +528,6 @@ html_template = r"""<!DOCTYPE html>
         .failCase   { color: #f39c12; font-weight: bold; }
         .errorCase  { color: #c0392b; font-weight: bold; }
         .skipCase   { color: #2980b9; font-weight: bold; }
-        .hiddenRow  { display: none; }
-        .testcase   { margin-left: 2em; }
 
         .errorButton { background-color: #c0392b; border: 1px solid; color: white;}
         .failButton { background-color: #f39c12; border: 1px solid; color: white; }
@@ -536,14 +535,14 @@ html_template = r"""<!DOCTYPE html>
         .passButton {background-color: #27ae60; border: 1px solid; color: white; }
         .allButton { background-color: #34495e; border: 1px solid; color: white; }
         .disableButton { background-color: #eaeded; border: 1px solid; color: #34495e; border-color: white }
-
+        
+        #reportLog { color: white; }
         .table-head {
             padding-right:17px;
             background-color:#34495e;
         }
         .table-head th {
             font-weight: bold;
-            font-size: 15px;
             color: white;
             padding: 2px;
             height: 30px;
@@ -564,6 +563,7 @@ html_template = r"""<!DOCTYPE html>
             white-space:nowrap;
             overflow:hidden;
             text-overflow:ellipsis;
+            font-size: 90%%;
         }
         .table-body td:nth-child(n+2) {
             text-align: center;
@@ -604,7 +604,7 @@ html_template = r"""<!DOCTYPE html>
                         <th>Error</th>
                         <th>Skip</th>
                         <th>Duration</th>
-                        <th>Log</th>
+                        <th><a id="reportLog" href="javascript:showLog(null, null, null)">Log</a></th>
                     </tr>
                 </thead>
             </table>
@@ -647,6 +647,7 @@ test_log_gap_tips = """
     Test Case Running...
 ...
 
+
 """
 
 
@@ -664,7 +665,7 @@ initial_case_sql = """
         logs TEXT
     )"""
 insertion_case_sql = """
-    INSERT INTO testcase(module, class, method, description, logs) VALUES (?, ?, ?, ?, '')"""
+    INSERT INTO testcase (module, class, method, description, logs) VALUES (?, ?, ?, ?, '')"""
 insertion_cls_sql = """
     INSERT INTO testcase (module, class, description, logs) SELECT * FROM (SELECT ?, ?, ?, '') AS tmp 
     WHERE NOT EXISTS (SELECT module, class FROM testcase WHERE module=? AND class=?) LIMIT 1;"""
@@ -703,6 +704,8 @@ update_test_end_sql = """
     UPDATE testcase SET endTime=? WHERE module IS NULL AND class IS NULL AND method IS NULL"""
 update_test_msg_sql = """
     UPDATE testcase SET message=? WHERE module IS NULL AND class IS NULL AND method IS NULL"""
+update_test_log_sql = """
+    UPDATE testcase SET logs=logs||? WHERE module IS NULL AND class IS NULL AND method IS NULL"""
 
 
 class TestHandler(logging.Handler):
@@ -765,9 +768,9 @@ class SQLiteTestResult(unittest.TestResult):
             logger.info('Case [{0} {1} {2}] output: {3}'.format(mod, cls, method, msg))
             conn.execute(update_case_msg_sql, (msg, mod, cls, method))
         if end:
+            conn.execute(update_case_end_sql, (end.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], mod, cls, method))
             logger.info('Case [{0} {1} {2}] finished at {3}'.format(
-                mod, cls, method, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
-            conn.execute(update_case_end_sql, (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], mod, cls, method))
+                mod, cls, method, end.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
         conn.commit()
 
     def getDescription(self, test):
@@ -789,32 +792,32 @@ class SQLiteTestResult(unittest.TestResult):
 
     def addSuccess(self, test):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Pass', end=True)
+                         result='Pass', end=datetime.now())
         super(SQLiteTestResult, self).addSuccess(test)
 
     def addError(self, test, err):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Error', end=True, msg=self._exc_info_to_string(err, test))
+                         result='Error', end=datetime.now(), msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addError(test, err)
 
     def addFailure(self, test, err):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Fail', end=True, msg=self._exc_info_to_string(err, test))
+                         result='Fail', end=datetime.now(), msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addFailure(test, err)
 
     def addSkip(self, test, reason):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Skip', end=True, msg=reason)
+                         result='Skip', end=datetime.now(), msg=reason)
         super(SQLiteTestResult, self).addSkip(test, reason)
 
     def addExpectedFailure(self, test, err):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Fail', end=True, msg=self._exc_info_to_string(err, test))
+                         result='Fail', end=datetime.now(), msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addExpectedFailure(test, err)
 
     def addUnexpectedSuccess(self, test):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Pass', end=True)
+                         result='Pass', end=datetime.now())
         super(SQLiteTestResult, self).addUnexpectedSuccess(test)
 
 
@@ -829,9 +832,9 @@ def update_class(cls, db, test_cls, start=None, end=None, message=None):
         conn.execute(update_cls_msg_sql, (message, test_cls.__module__, test_cls.__name__))
         logger.info('Class: {0} output: {1}'.format(test_cls.__name__, message))
     if end:
-        logger.info('Class: {0} finished at {1}'.format(test_cls.__name__, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')))
         conn.execute(update_cls_end_sql,
-                     (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], test_cls.__module__, test_cls.__name__))
+                     (end.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], test_cls.__module__, test_cls.__name__))
+        logger.info('Class: {0} finished at {1}'.format(test_cls.__name__, end.strftime('%Y-%m-%d %H:%M:%S.%f')))
     conn.commit()
 
 
@@ -846,9 +849,9 @@ def update_module(cls, db, test_mod, start=None, end=None, message=None):
         conn.execute(update_mod_msg_sql, (message, test_mod))
         logger.info('Module: {0} output: {1}'.format(test_mod, message))
     if end:
-        logger.info('Module: {0} finished at {1}'.format(test_mod, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')))
+        logger.info('Module: {0} finished at {1}'.format(test_mod, end.strftime('%Y-%m-%d %H:%M:%S.%f')))
         conn.execute(update_mod_end_sql,
-                     (datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], test_mod))
+                     (end.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3], test_mod))
     conn.commit()
 
 
@@ -866,20 +869,25 @@ def _tearDownPreviousClass(self, test, result):
     previous_class = getattr(result, '_previousTestClass', None)
     result.currentModule = test.__class__.__module__ if test is not None else None
     if previous_class and previous_class != test.__class__:
-        self.update_class(result.db, previous_class, end=True)
+        self.update_class(result.db, previous_class, end=datetime.now())
         TestHandler.get_handler().store_cache(
-            self.db, update_cls_log_sql, (test.__class__.__module__, test.__class__.__name__), gap_tips=True)
+            self.db, update_cls_log_sql, (previous_class.__module__, previous_class.__name__), gap_tips=True)
+
+def _handleModuleFixture(self, test, result):
+    previousModule = self._get_previous_module(result)
+    super(self.__class__, self)._handleModuleFixture(test, result)
+    if test.__class__.__module__ and previousModule != test.__class__.__module__:
+        TestHandler.get_handler().store_cache(self.db, update_mod_log_sql, (test.__class__.__module__,))
 
 
 def _handleModuleTearDown(self, result):
     super(self.__class__, self)._handleModuleTearDown(result)
     previousModule = self._get_previous_module(result)
     if previousModule and previousModule != result.currentModule:
-        self.update_module(result.db, previousModule, end=True)
+        self.update_module(result.db, previousModule, end=datetime.now())
         TestHandler.get_handler().store_cache(self.db, update_mod_log_sql, (previousModule,), gap_tips=True)
     if result.currentModule and previousModule != result.currentModule:
         self.update_module(result.db, result.currentModule, start=datetime.now())
-        TestHandler.get_handler().store_cache(self.db, update_mod_log_sql, (result.currentModule,))
 
 
 class SQLiteTestRunner(object):
@@ -918,7 +926,7 @@ class SQLiteTestRunner(object):
         self.suiteClass = type(
             'SQLiteTestSuite', (test.__class__,),
             dict(_handleClassSetUp=_handleClassSetUp, _tearDownPreviousClass=_tearDownPreviousClass,
-                 _handleModuleTearDown=_handleModuleTearDown,
+                 _handleModuleTearDown=_handleModuleTearDown, _handleModuleFixture=_handleModuleFixture,
                  update_class=update_class, update_module=update_module))
         test_suite = self.suiteClass(test)
         test_suite.db = self.db
@@ -981,6 +989,7 @@ class SQLiteTestRunner(object):
             test_suite = self.alter_suite_class(test)
             self.init_db_case_list(test_suite)
             self.update_report(start=datetime.now())
+            TestHandler.get_handler().store_cache(self.db, update_test_log_sql, tuple())
             startTestRun = getattr(result, 'startTestRun', None)
             if startTestRun is not None:
                 startTestRun()
@@ -991,4 +1000,5 @@ class SQLiteTestRunner(object):
                 if stopTestRun is not None:
                     stopTestRun()
             self.update_report(end=datetime.now())
+        TestHandler.get_handler().store_cache(self.db, update_test_log_sql, tuple(), gap_tips=True)
         return result

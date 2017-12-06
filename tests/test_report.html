@@ -196,7 +196,7 @@
     }
 
     function showResult(row){
-        document.getElementsByTagName('title')[0].innerHTML = row[desc];
+        document.title = row[desc];
         document.getElementById('title').innerHTML =  row[desc];
         start_time = document.getElementById('StartTime');
         start_time.innerHTML += row[start];
@@ -264,8 +264,7 @@
         var mod_modify = document.createElement('td');
         var mod_log_link = document.createElement('a')
         mod_log_link.innerHTML = 'View Log';
-        mod_log_link.href = 'javascript:showLog("' + row[module] + '", null, null, "' + 
-                            row[start] + '", "' + row[end] + '")';
+        mod_log_link.href = 'javascript:showLog("' + row[module] + '", null, null)';
         mod_modify.appendChild(mod_log_link);
 
         tr.appendChild(mod_name);
@@ -299,8 +298,7 @@
         var cls_modify = document.createElement('td');
         var cls_log_link = document.createElement('a')
         cls_log_link.innerHTML = 'View Log';
-        cls_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", null, "' + 
-                            row[start] + '", "' + row[end] + '")';
+        cls_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", null)';
         cls_modify.appendChild(cls_log_link);
 
         tr.appendChild(cls_name);
@@ -338,8 +336,8 @@
         case_log_td.align = 'center';
         var case_log_link = document.createElement('a')
         case_log_link.innerHTML = 'View Log';
-        case_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", "'
-                             + row[method] + '", "' + row[start] + '", "' + row[end] + '")';
+        case_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", "' 
+                             + row[method] + '")';
         case_log_td.appendChild(case_log_link);
 
         tr.appendChild(name);
@@ -390,7 +388,7 @@
         });
     }
 
-    function showLog(module_str, class_str, method_str, case_start, case_stop) {
+    function showLog(module_str, class_str, method_str) {
         document.getElementById('log_content').innerHTML = '';
         document.getElementById('logDiv').style.display = 'block';
         document.getElementById('case_log').style.height = (
@@ -400,11 +398,14 @@
         loadBinaryFile(result_db, function(data){
             var db = new SQL.Database(data);
             // Database is ready
-            if (method_str === null) {
+            if (module_str === null) {
+                document.getElementById('log_title').innerHTML = 'Log: ' + document.title;
+                sql_result = db.exec("SELECT logs FROM testcase WHERE module IS NULL AND class IS NULL AND method IS NULL");
+            } else if (class_str === null) {
                 document.getElementById('log_title').innerHTML = 'Log: ' + module_str;
                 sql_result = db.exec("SELECT logs FROM testcase " +
                                          "WHERE module='" + module_str + "' AND class IS NULL AND method IS NULL");
-            } else if (class_str === null) {
+            } else if (method_str === null) {
                 document.getElementById('log_title').innerHTML = 'Log: ' + module_str + '.' + class_str;
                 sql_result = db.exec("SELECT logs FROM testcase " +
                                      "WHERE module='" + module_str + "' AND class='" + class_str + 
@@ -445,16 +446,16 @@
     <meta charset="UTF-8">
     <title>Test Report</title>
     <style type="text/css" media="screen">
-        body        { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 80%; }
-        table       { font-size: 100%; table-layout:fixed; }
-        pre         { margin-left: 20px; font-size: 12px; line-height: 20px; }
+        body        { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+        table       { table-layout:fixed; }
+        pre         { margin-left: 20px; line-height: 200%; white-space: pre-wrap; word-wrap: break-word; }
+        input       { font-size: 100%; }
 
         /* -- heading ---------------------------------------------------------------------- */
-        h1                   { font-size: 16pt; color: #34495e; }
+        h1                   { font-size: 150%; color: #34495e; }
         .heading             { margin-top: 0ex; margin-bottom: 1ex; }
         .heading.attribute   { margin-top: 1ex; margin-bottom: 0; }
         .heading.description { margin-top: 4ex; margin-bottom: 6ex; }
-        pre                  { white-space: pre-wrap; word-wrap: break-word; }
 
         /* -- css div popup ----------------------------------------------------------------- */
         .popDiv {
@@ -485,7 +486,7 @@
             background-color:#2c3e50;
             text-align: center;
             vertical-align: middle;
-            font-size: 20px;
+            font-size: 120%;
             font-weight: bold;
             color: white;
         }
@@ -496,7 +497,7 @@
         }
         .divTitle{
             color: white;
-            font-size: 20px;
+            font-size: 120%;
             font-weight: bold;
             line-height: 40px;
             margin-left: 10px;
@@ -515,8 +516,6 @@
         .failCase   { color: #f39c12; font-weight: bold; }
         .errorCase  { color: #c0392b; font-weight: bold; }
         .skipCase   { color: #2980b9; font-weight: bold; }
-        .hiddenRow  { display: none; }
-        .testcase   { margin-left: 2em; }
 
         .errorButton { background-color: #c0392b; border: 1px solid; color: white;}
         .failButton { background-color: #f39c12; border: 1px solid; color: white; }
@@ -524,14 +523,14 @@
         .passButton {background-color: #27ae60; border: 1px solid; color: white; }
         .allButton { background-color: #34495e; border: 1px solid; color: white; }
         .disableButton { background-color: #eaeded; border: 1px solid; color: #34495e; border-color: white }
-
+        
+        #reportLog { color: white; }
         .table-head {
             padding-right:17px;
             background-color:#34495e;
         }
         .table-head th {
             font-weight: bold;
-            font-size: 15px;
             color: white;
             padding: 2px;
             height: 30px;
@@ -552,6 +551,7 @@
             white-space:nowrap;
             overflow:hidden;
             text-overflow:ellipsis;
+            font-size: 90%;
         }
         .table-body td:nth-child(n+2) {
             text-align: center;
@@ -592,7 +592,7 @@
                         <th>Error</th>
                         <th>Skip</th>
                         <th>Duration</th>
-                        <th>Log</th>
+                        <th><a id="reportLog" href="javascript:showLog(null, null, null)">Log</a></th>
                     </tr>
                 </thead>
             </table>
