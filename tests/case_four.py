@@ -2,6 +2,7 @@
 """ Example test module four. """
 from unittest import TestCase
 import logging
+from parameterized import parameterized
 
 logger = logging.getLogger()
 
@@ -24,9 +25,10 @@ class TestStringMethods(TestCase):
         self.assertTrue('FOO'.isupper())
         self.assertFalse('Foo'.isupper())
 
-    def test_split(self):
-        s = 'hello world'
-        self.assertEqual(s.split(), ['hello', 'world'])
+    @parameterized.expand(input=[('hello world2', ['hello', 'world2']),
+                                 ('for test1', ['for', 'test1'])])
+    def test_split(self, s, sp):
+        self.assertEqual(s.split(), sp)
         # check that s.split fails when the separator is not a string
         with self.assertRaises(TypeError):
             s.split(2)

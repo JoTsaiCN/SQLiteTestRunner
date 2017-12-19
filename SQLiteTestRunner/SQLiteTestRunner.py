@@ -16,9 +16,9 @@ html_template = r"""<!DOCTYPE html>
 <script language="javascript" type="text/javascript">
     result_db = "%(reportdb)s";
     // result_table
-    id = 0;
-    module = 1;
-    case_class = 2;
+    module = 0;
+    case_class = 1;
+    method = 2;
     method = 3;
     desc = 4;
     result = 5;
@@ -137,16 +137,16 @@ html_template = r"""<!DOCTYPE html>
             result_count = 0;
             error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
-                 if (sql_result[0].values[i][0] == 'Pass') {
+                 if (sql_result[0].values[i][0] == 'PASS') {
                     pass.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Skip') {
+                 if (sql_result[0].values[i][0] == 'SKIP') {
                     skip.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Fail') {
+                 if (sql_result[0].values[i][0] == 'FAIL') {
                     failed.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Error' || sql_result[0].values[i][0] === null) {
+                 if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] === null) {
                     error.innerHTML += sql_result[0].values[i][1];
                  }
                  result_count += sql_result[0].values[i][1];
@@ -177,16 +177,16 @@ html_template = r"""<!DOCTYPE html>
             result_count = 0;
             error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
-                 if (sql_result[0].values[i][0] == 'Pass') {
+                 if (sql_result[0].values[i][0] == 'PASS') {
                     pass.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Skip') {
+                 if (sql_result[0].values[i][0] == 'SKIP') {
                     skip.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Fail') {
+                 if (sql_result[0].values[i][0] == 'FAIL') {
                     failed.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Error' || sql_result[0].values[i][0] == 'Error') {
+                 if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] == 'ERROR') {
                     error_count += sql_result[0].values[i][1];
                  }
                  result_count += sql_result[0].values[i][1];
@@ -226,7 +226,7 @@ html_template = r"""<!DOCTYPE html>
             result_count = 0;
             error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
-                if (sql_result[0].values[i][0] == 'Error' || sql_result[0].values[i][0] === null) {
+                if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] === null) {
                     error_count += sql_result[0].values[i][1];
                 } else {
                     status_arr.push(sql_result[0].values[i][0] + ' ' + sql_result[0].values[i][1]);
@@ -234,7 +234,7 @@ html_template = r"""<!DOCTYPE html>
                 result_count += sql_result[0].values[i][1];
             }
             if(error_count > 0) {
-                status_arr.push('Error ' + error_count);
+                status_arr.push('ERROR ' + error_count);
             }
             button = document.createElement('input');
             button.type = 'button';
@@ -357,11 +357,11 @@ html_template = r"""<!DOCTYPE html>
         tr.appendChild(duration);
         tr.appendChild(case_log_td);
 
-        if (row[result] == 'Error') {
+        if (row[result] == 'ERROR') {
             tr.className = 'errorCase';
-        } else if (row[result] == 'Fail') {
+        } else if (row[result] == 'FAIL') {
             tr.className = 'failCase';
-        } else if (row[result] == 'Skip') {
+        } else if (row[result] == 'SKIP') {
             tr.className = 'skipCase';
         } else {
             tr.className = 'passCase';
@@ -599,10 +599,10 @@ html_template = r"""<!DOCTYPE html>
                     <tr>
                         <th>Test Module/Test Class/Test Case</th>
                         <th>Count</th>
-                        <th>Pass</th>
-                        <th>Failed</th>
-                        <th>Error</th>
-                        <th>Skip</th>
+                        <th>PASS</th>
+                        <th>FAIL</th>
+                        <th>ERROR</th>
+                        <th>SKIP</th>
                         <th>Duration</th>
                         <th><a id="reportLog" href="javascript:showLog(null, null, null)">Log</a></th>
                     </tr>
@@ -647,16 +647,15 @@ test_log_gap_tips = """
     Test Case Running...
 ...
 
-
 """
 
 
 initial_case_sql = """
     CREATE TABLE IF NOT EXISTS testcase(
-        id INTEGER PRIMARY KEY,
         module TEXT,
         class TEXT,
         method TEXT,
+        origin TEXT,
         description TEXT,
         result TEXT,
         message TEXT,
@@ -664,14 +663,11 @@ initial_case_sql = """
         endTime TEXT,
         logs TEXT
     )"""
+# Add and update info of a test case
 insertion_case_sql = """
-    INSERT INTO testcase (module, class, method, description, logs) VALUES (?, ?, ?, ?, '')"""
-insertion_cls_sql = """
-    INSERT INTO testcase (module, class, description, logs) SELECT * FROM (SELECT ?, ?, ?, '') AS tmp 
-    WHERE NOT EXISTS (SELECT module, class FROM testcase WHERE module=? AND class=?) LIMIT 1;"""
-insertion_mod_sql = """
-    INSERT INTO testcase (module, description, logs) SELECT * FROM (SELECT ?, ?, '') AS tmp 
-    WHERE NOT EXISTS (SELECT module FROM testcase WHERE module=?) LIMIT 1;"""
+    INSERT INTO testcase (module, class, method, origin, description, logs) VALUES (?, ?, ?, ?, ?, '')"""
+update_case_origin_sql = """
+    UPDATE testcase SET message=? WHERE module=? AND class=? AND method=?"""
 update_case_start_sql = """
     UPDATE testcase SET startTime=? WHERE module=? AND class=? AND method=? AND startTime IS NULL"""
 update_case_result_sql = """
@@ -682,6 +678,10 @@ update_case_msg_sql = """
     UPDATE testcase SET message=? WHERE module=? AND class=? AND method=?"""
 update_case_log_sql = """
     UPDATE testcase SET logs=logs||? WHERE module=? AND class=? AND method=?"""
+# Add and update info of a test class
+insertion_cls_sql = """
+    INSERT INTO testcase (module, class, description, logs) SELECT * FROM (SELECT ?, ?, ?, '') AS tmp 
+    WHERE NOT EXISTS (SELECT module, class FROM testcase WHERE module=? AND class=?) LIMIT 1;"""
 update_cls_start_sql = """
     UPDATE testcase SET startTime=? WHERE module=? AND class=? AND method IS NULL AND startTime IS NULL"""
 update_cls_end_sql = """
@@ -690,6 +690,10 @@ update_cls_msg_sql = """
     UPDATE testcase SET message=? WHERE module=? AND class=? AND method IS NULL"""
 update_cls_log_sql = """
     UPDATE testcase SET logs=logs||? WHERE module=? AND class=? AND method IS NULL"""
+# Add and update info of a test module
+insertion_mod_sql = """
+    INSERT INTO testcase (module, description, logs) SELECT * FROM (SELECT ?, ?, '') AS tmp 
+    WHERE NOT EXISTS (SELECT module FROM testcase WHERE module=?) LIMIT 1;"""
 update_mod_start_sql = """
     UPDATE testcase SET startTime=? WHERE module=? AND class IS NULL AND method IS NULL AND startTime IS NULL"""
 update_mod_end_sql = """
@@ -698,6 +702,10 @@ update_mod_msg_sql = """
     UPDATE testcase SET message=? WHERE module=? AND class IS NULL AND method IS NULL"""
 update_mod_log_sql = """
     UPDATE testcase SET logs=logs||? WHERE module=? AND class IS NULL AND method IS NULL"""
+# Add and update info of whole test
+insertion_test_sql = """
+    INSERT INTO testcase (description, logs) SELECT * FROM (SELECT ?, '') AS tmp 
+    WHERE NOT EXISTS (SELECT module FROM testcase WHERE module IS NULL) LIMIT 1;"""
 update_test_start_sql = """
     UPDATE testcase SET startTime=? WHERE module IS NULL AND class IS NULL AND method IS NULL AND startTime IS NULL"""
 update_test_end_sql = """
@@ -706,17 +714,25 @@ update_test_msg_sql = """
     UPDATE testcase SET message=? WHERE module IS NULL AND class IS NULL AND method IS NULL"""
 update_test_log_sql = """
     UPDATE testcase SET logs=logs||? WHERE module IS NULL AND class IS NULL AND method IS NULL"""
-TEST_LEVEL = ['module', 'class', 'method']
-select_rerun_test = """
-    SELECT DISTINCT {0} FROM testcase WHERE method IS NOT NULL AND 
-    (result IS NULL OR result IN ({1}))"""
-delete_test_module = """
-    DELETE FROM testcase WHERE module=?"""
-delete_test_class = """
-    DELETE FROM testcase WHERE module=? AND class=?"""
-update_test_rerun_method = """
-    UPDATE testcase SET result=NULL, startTime=NULL, endTime=NULL 
-    WHERE module=? AND class=? AND method=?"""
+# Get test case to rerun
+select_rerun_module = """
+    SELECT DISTINCT module FROM testcase WHERE method IS NOT NULL AND 
+    (result IS NULL OR result IN ({0}))"""
+select_rerun_class = """
+    SELECT DISTINCT module, class FROM testcase WHERE method IS NOT NULL AND 
+    (result IS NULL OR result IN ({0}))"""
+select_rerun_method = """
+    SELECT DISTINCT module, class, origin FROM testcase WHERE method IS NOT NULL AND origin IS NOT NULL AND 
+    (result IS NULL OR result IN ({0}))"""
+select_origin_method = """
+    SELECT DISTINCT origin FROM testcase WHERE module=? AND class=? AND method=? AND origin IS NOT NULL"""
+select_parameterized_method = """
+    SELECT DISTINCT method FROM testcase WHERE module=? AND class=? AND origin=? AND method IS NOT NULL"""
+update_test_case_method = """
+    UPDATE testcase SET result=NULL, startTime=NULL WHERE module=? AND class=? AND method=?"""
+update_parameterized_method = """
+    UPDATE testcase SET method=?, description=?, result=NULL, startTime=NULL 
+    WHERE module=? AND class=? AND method=? AND origin=?"""
 
 
 class TestHandler(logging.Handler):
@@ -803,32 +819,32 @@ class SQLiteTestResult(unittest.TestResult):
 
     def addSuccess(self, test):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Pass', end=datetime.now())
+                         result='PASS', end=datetime.now())
         super(SQLiteTestResult, self).addSuccess(test)
 
     def addError(self, test, err):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Error', end=datetime.now(), msg=self._exc_info_to_string(err, test))
+                         result='ERROR', end=datetime.now(), msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addError(test, err)
 
     def addFailure(self, test, err):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Fail', end=datetime.now(), msg=self._exc_info_to_string(err, test))
+                         result='FAIL', end=datetime.now(), msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addFailure(test, err)
 
     def addSkip(self, test, reason):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Skip', end=datetime.now(), msg=reason)
+                         result='SKIP', end=datetime.now(), msg=reason)
         super(SQLiteTestResult, self).addSkip(test, reason)
 
     def addExpectedFailure(self, test, err):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Fail', end=datetime.now(), msg=self._exc_info_to_string(err, test))
+                         result='FAIL', end=datetime.now(), msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addExpectedFailure(test, err)
 
     def addUnexpectedSuccess(self, test):
         self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         result='Pass', end=datetime.now())
+                         result='PASS', end=datetime.now())
         super(SQLiteTestResult, self).addUnexpectedSuccess(test)
 
 
@@ -903,9 +919,8 @@ class SQLiteTestSuite(unittest.TestSuite):
 
     @classmethod
     def alter_super_class(cls, suite_cls):
-        print(SQLiteTestSuite.__bases__)
-        setattr(SQLiteTestSuite, '__bases__', suite_cls.__mro__)
-        print(SQLiteTestSuite.__bases__)
+        if suite_cls.__mro__[0] is not SQLiteTestSuite:
+            setattr(SQLiteTestSuite, '__bases__', suite_cls.__mro__)
 
     def alter_suite_class(self):
         for test in self._tests:
@@ -921,7 +936,7 @@ class SQLiteTestRunner(object):
     resultclass = SQLiteTestResult
 
     def __init__(self, db=None, html=None, descriptions=True, verbosity=1, 
-                 rerun=False, rerun_status=(None,), rerun_level='class',
+                 rerun=False, rerun_status=None, rerun_level='class',
                  failfast=False, buffer=False, resultclass=None, warnings=None,
                  *, tb_locals=False):
         """Construct a SQLiteTestRunner.
@@ -932,7 +947,7 @@ class SQLiteTestRunner(object):
         self.verbosity = verbosity
         self.failfast = failfast
         self.rerun = rerun
-        self.rerun_status = rerun_status
+        self.rerun_status = tuple([status.upper() for status in rerun_status]) if rerun_status else tuple()
         self.rerun_level = rerun_level
         self.buffer = buffer
         self.tb_locals = tb_locals
@@ -960,78 +975,110 @@ class SQLiteTestRunner(object):
                         case.__module__, case.__class__.__name__, case.__class__.__doc__,
                         case.__module__, case.__class__.__name__))
                     conn.execute(insertion_case_sql, (
-                        case.__module__, case.__class__.__name__,
-                        getattr(case, '_testMethodName'), case.shortDescription()))
+                        case.__module__, case.__class__.__name__, getattr(case, '_testMethodName'),
+                        self.get_origin_method_from_case(case), case.shortDescription()))
                 else:
                     self.add_case(conn, case)
 
     def init_db_case_list(self, suite):
         conn = sqlite3.connect(self.db)
         conn.execute(initial_case_sql)
-        conn.execute(insertion_case_sql, (None, None, None, self.descriptions))
+        conn.execute(insertion_test_sql, (self.descriptions,))
         self.add_case(conn, suite)
         conn.commit()
 
-    def delete_case(self, test_suite, delete_test, delete_mark, conn):
-        if isinstance(test_suite, unittest.TestSuite) and len(getattr(test_suite, '_tests')) > 0:
-            remove_list = []
-            for test in test_suite:
-                if not isinstance(test, unittest.TestSuite):
-                    if self.rerun_level == 'module':
-                        if test.__module__ in delete_test:
-                            if test.__module__ not in delete_mark:
-                                conn.execute(delete_test_module, (test.__module__,))
-                                delete_mark.append(test.__module__)
-                            conn.execute(insertion_mod_sql, (
-                                test.__module__, sys.modules[test.__module__].__doc__, test.__module__))
-                            conn.execute(insertion_cls_sql, (
-                                test.__module__, test.__class__.__name__, test.__class__.__doc__,
-                                test.__module__, test.__class__.__name__))
-                            conn.execute(insertion_case_sql, (
-                                test.__module__, test.__class__.__name__,
-                                getattr(test, '_testMethodName'), test.shortDescription()))
-                        else:
-                            remove_list.append(test)
-
-                    if self.rerun_level == 'class':
-                        test_str = '.'.join([test.__module__, test.__class__.__name__])
-                        if test_str in delete_test:
-                            if test_str not in delete_mark:
-                                conn.execute(delete_test_class, (test.__module__, test.__class__.__name__))
-                                delete_mark.append(test_str)
-                            conn.execute(insertion_cls_sql, (
-                                test.__module__, test.__class__.__name__, test.__class__.__doc__,
-                                test.__module__, test.__class__.__name__))
-                            conn.execute(insertion_case_sql, (
-                                test.__module__, test.__class__.__name__,
-                                getattr(test, '_testMethodName'), test.shortDescription()))
-                        else:
-                            remove_list.append(test)
-
-                    if self.rerun_level == 'method':
-                        test_str = '.'.join([test.__module__, test.__class__.__name__, getattr(test, '_testMethodName')])
-                        if test_str in delete_test:
-                            conn.execute(
-                                update_test_rerun_method,
-                                (test.__module__, test.__class__.__name__, getattr(test, '_testMethodName')))
-                        else:
-                            remove_list.append(test)
-                else:
-                    self.delete_case(test, delete_test, delete_mark, conn)
-            for test in remove_list:
-                getattr(test_suite, '_tests').remove(test)
-
-    def remove_executed_case(self, test_suite):
+    def get_origin_method_from_db(self, test_module, test_class, test_method):
         conn = sqlite3.connect(self.db)
-        select_rerun_test_sql = select_rerun_test.format(','.join(TEST_LEVEL[:TEST_LEVEL.index(self.rerun_level) + 1]),
-                                                         ','.join(['?']*len(self.rerun_status)))
-        rerun_test_result = conn.execute(select_rerun_test_sql, self.rerun_status).fetchall()
-
-        rerun_test_list = ['.'.join(row) for row in rerun_test_result]
-        delete_mark = []
-        self.delete_case(test_suite, rerun_test_list, delete_mark, conn)
+        origin_method = conn.execute(select_origin_method, (test_module, test_class, test_method)).fetchall()
         conn.commit()
-        return test_suite
+        if origin_method and origin_method[0][0]:
+            return origin_method[0][0]
+        else:
+            return None
+
+    @classmethod
+    def get_origin_method_from_case(cls, test_case):
+        test_method = getattr(test_case.__class__, getattr(test_case, '_testMethodName'))
+        if test_method.__closure__:
+            return test_method.__closure__[0].cell_contents.__name__
+        else:
+            return test_method.__name__
+
+    @classmethod
+    def is_parameterized_case(self, test_case):
+        test_method = getattr(test_case.__class__, getattr(test_case, '_testMethodName'))
+        return test_method.__closure__ is not None and test_method.__closure__[
+                                                           0].cell_contents.__name__ != test_method.__name__
+
+    def prepare_db_for_rerun(self, conn, test_suite):
+        if isinstance(test_suite, unittest.TestSuite) and len(getattr(test_suite, '_tests')) > 0:
+            rerun_parameterized_case = dict()
+            for case in test_suite:
+                if isinstance(case, unittest.TestSuite):
+                    self.prepare_db_for_rerun(conn, case)
+                else:
+                    if self.is_parameterized_case(case):
+                        case_dict_key = '-'.join(
+                            [case.__module__, case.__class__.__name__, self.get_origin_method_from_case(case)])
+                        if rerun_parameterized_case.get(case_dict_key) is None:
+                            rerun_parameterized_case[case_dict_key] = list()
+                        rerun_parameterized_case[case_dict_key].append(case)
+                    else:
+                        conn.execute(update_test_case_method,
+                                     (case.__module__, case.__class__.__name__, getattr(case, '_testMethodName')))
+            for method, cases in rerun_parameterized_case.items():
+                db_cases = conn.execute(select_parameterized_method, tuple(method.split('-'))).fetchall()
+                for db_case, case in list(zip(db_cases, cases)):
+                    conn.execute(update_parameterized_method,
+                                 (getattr(case, '_testMethodName'), case.shortDescription(), method.split('-')[0],
+                                  method.split('-')[1], db_case[0], self.get_origin_method_from_case(case)))
+
+    def get_rerun_case(self, test_suite):
+        conn = sqlite3.connect(self.db)
+        rerun_test_suite = test_suite.__class__()
+        if self.rerun_level == 'module':
+            rerun_test_list = conn.execute(
+                select_rerun_module.format(','.join(['?'] * len(self.rerun_status))),
+                self.rerun_status).fetchall()
+            conn.commit()
+            for test_module in rerun_test_list:
+                rerun_test_suite.addTests(unittest.defaultTestLoader.loadTestsFromModule(
+                    sys.modules[test_module]))
+        elif self.rerun_level == 'class':
+            rerun_test_list = conn.execute(
+                select_rerun_class.format(','.join(['?'] * len(self.rerun_status))),
+                self.rerun_status).fetchall()
+            conn.commit()
+            for test_module, test_class in rerun_test_list:
+                rerun_test_suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(
+                    getattr(sys.modules[test_module], test_class)))
+        elif self.rerun_level == 'method':
+            class_list = conn.execute(
+                select_rerun_class.format(','.join(['?'] * len(self.rerun_status))),
+                self.rerun_status).fetchall()
+            rerun_test_list = conn.execute(
+                select_rerun_method.format(','.join(['?'] * len(self.rerun_status))), self.rerun_status).fetchall()
+            conn.commit()
+            # Get case from test class
+            for test_module, test_class in class_list:
+                test_class_cases = unittest.defaultTestLoader.loadTestsFromTestCase(
+                    getattr(sys.modules[test_module], test_class))
+                # Remove case that not need to be rerun
+                remove_case = []
+                for case in test_class_cases:
+                    if (test_module, test_class, self.get_origin_method_from_case(case)) not in rerun_test_list:
+                        remove_case.append(case)
+                for case in remove_case:
+                    getattr(test_class_cases, '_tests').remove(case)
+                rerun_test_suite.addTests(test_class_cases)
+        else:
+            raise ValueError('No such rerun level, must be module, class or method')
+        conn = sqlite3.connect(self.db)
+        self.prepare_db_for_rerun(conn, rerun_test_suite)
+        conn.commit()
+        rerun_test_suite.db = self.db
+        rerun_test_suite.alter_suite_class()
+        return rerun_test_suite
 
     def update_report(self, start=None, end=None):
         conn = sqlite3.connect(self.db)
@@ -1062,7 +1109,7 @@ class SQLiteTestRunner(object):
                                             message='Please use assert\w+ instead.')
             test_suite = self.alter_suite_class(test)
             if self.rerun:
-                test_suite = self.remove_executed_case(test_suite)
+                test_suite = self.get_rerun_case(test_suite)
             else:
                 # Generate html report at first
                 html_tmpl_dict = dict(reportdb=self.db)

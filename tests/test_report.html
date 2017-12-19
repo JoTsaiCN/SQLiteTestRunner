@@ -4,9 +4,9 @@
 <script language="javascript" type="text/javascript">
     result_db = "test_result.db";
     // result_table
-    id = 0;
-    module = 1;
-    case_class = 2;
+    module = 0;
+    case_class = 1;
+    method = 2;
     method = 3;
     desc = 4;
     result = 5;
@@ -125,16 +125,16 @@
             result_count = 0;
             error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
-                 if (sql_result[0].values[i][0] == 'Pass') {
+                 if (sql_result[0].values[i][0] == 'PASS') {
                     pass.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Skip') {
+                 if (sql_result[0].values[i][0] == 'SKIP') {
                     skip.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Fail') {
+                 if (sql_result[0].values[i][0] == 'FAIL') {
                     failed.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Error' || sql_result[0].values[i][0] === null) {
+                 if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] === null) {
                     error.innerHTML += sql_result[0].values[i][1];
                  }
                  result_count += sql_result[0].values[i][1];
@@ -165,16 +165,16 @@
             result_count = 0;
             error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
-                 if (sql_result[0].values[i][0] == 'Pass') {
+                 if (sql_result[0].values[i][0] == 'PASS') {
                     pass.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Skip') {
+                 if (sql_result[0].values[i][0] == 'SKIP') {
                     skip.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Fail') {
+                 if (sql_result[0].values[i][0] == 'FAIL') {
                     failed.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'Error' || sql_result[0].values[i][0] == 'Error') {
+                 if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] == 'ERROR') {
                     error_count += sql_result[0].values[i][1];
                  }
                  result_count += sql_result[0].values[i][1];
@@ -214,7 +214,7 @@
             result_count = 0;
             error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
-                if (sql_result[0].values[i][0] == 'Error' || sql_result[0].values[i][0] === null) {
+                if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] === null) {
                     error_count += sql_result[0].values[i][1];
                 } else {
                     status_arr.push(sql_result[0].values[i][0] + ' ' + sql_result[0].values[i][1]);
@@ -222,7 +222,7 @@
                 result_count += sql_result[0].values[i][1];
             }
             if(error_count > 0) {
-                status_arr.push('Error ' + error_count);
+                status_arr.push('ERROR ' + error_count);
             }
             button = document.createElement('input');
             button.type = 'button';
@@ -345,11 +345,11 @@
         tr.appendChild(duration);
         tr.appendChild(case_log_td);
 
-        if (row[result] == 'Error') {
+        if (row[result] == 'ERROR') {
             tr.className = 'errorCase';
-        } else if (row[result] == 'Fail') {
+        } else if (row[result] == 'FAIL') {
             tr.className = 'failCase';
-        } else if (row[result] == 'Skip') {
+        } else if (row[result] == 'SKIP') {
             tr.className = 'skipCase';
         } else {
             tr.className = 'passCase';
@@ -587,10 +587,10 @@
                     <tr>
                         <th>Test Module/Test Class/Test Case</th>
                         <th>Count</th>
-                        <th>Pass</th>
-                        <th>Failed</th>
-                        <th>Error</th>
-                        <th>Skip</th>
+                        <th>PASS</th>
+                        <th>FAIL</th>
+                        <th>ERROR</th>
+                        <th>SKIP</th>
                         <th>Duration</th>
                         <th><a id="reportLog" href="javascript:showLog(null, null, null)">Log</a></th>
                     </tr>
