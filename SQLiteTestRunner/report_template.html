@@ -7,7 +7,7 @@
     module = 0;
     case_class = 1;
     method = 2;
-    method = 3;
+    origin = 3;
     desc = 4;
     result = 5;
     message = 6;
@@ -23,10 +23,10 @@
             return 'Interruption';
         }
         duration_num = new Date(end) - new Date(start);
-        second_gap = 1000
-        minute_gap = 60 * second_gap
-        hour_gap = 60 * minute_gap
-        day_gap = 24 * hour_gap
+        second_gap = 1000;
+        minute_gap = 60 * second_gap;
+        hour_gap = 60 * minute_gap;
+        day_gap = 24 * hour_gap;
         days = Math.floor(duration_num / day_gap);
         hours = Math.floor((duration_num % day_gap) / hour_gap);
         minutes = Math.floor((duration_num % hour_gap) / minute_gap);
