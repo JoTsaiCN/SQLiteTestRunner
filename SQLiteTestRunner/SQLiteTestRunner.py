@@ -186,7 +186,7 @@ html_template = r"""<!DOCTYPE html>
                  if (sql_result[0].values[i][0] == 'FAIL') {
                     failed.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] == 'ERROR') {
+                 if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] === null) {
                     error_count += sql_result[0].values[i][1];
                  }
                  result_count += sql_result[0].values[i][1];
@@ -236,19 +236,17 @@ html_template = r"""<!DOCTYPE html>
             if(error_count > 0) {
                 status_arr.push('ERROR ' + error_count);
             }
-            button = document.createElement('input');
-            button.type = 'button';
+            button = document.createElement('button');
             button.id = 'allButton';
             button.className = 'allButton';
-            button.value = 'Total ' + result_count;
+            button.textContent = 'Total ' + result_count;
             button.onclick = Function("changeCaseDisplay('All');");
             document.getElementById('Status').appendChild(button);
             for(var i=0; i<status_arr.length; i++) {
-                button = document.createElement('input');
+                button = document.createElement('button');
                 button.id = status_arr[i].split(' ')[0].toLowerCase() + 'Button';
                 button.className = status_arr[i].split(' ')[0].toLowerCase() + 'Button';
-                button.type = 'button';
-                button.value = status_arr[i];
+                button.textContent = status_arr[i].toLowerCase();
                 button.onclick = Function("changeCaseDisplay('" + status_arr[i].split(' ')[0] + "');");
                 document.getElementById('Status').appendChild(button);
             }
@@ -357,11 +355,11 @@ html_template = r"""<!DOCTYPE html>
         tr.appendChild(duration);
         tr.appendChild(case_log_td);
 
-        if (row[result] == 'ERROR') {
+        if (row[result].toUpperCase() == 'ERROR') {
             tr.className = 'errorCase';
-        } else if (row[result] == 'FAIL') {
+        } else if (row[result].toUpperCase() == 'FAIL') {
             tr.className = 'failCase';
-        } else if (row[result] == 'SKIP') {
+        } else if (row[result].toUpperCase() == 'SKIP') {
             tr.className = 'skipCase';
         } else {
             tr.className = 'passCase';
@@ -461,7 +459,7 @@ html_template = r"""<!DOCTYPE html>
         body        { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
         table       { table-layout:fixed; }
         pre         { margin-left: 20px; line-height: 200%%; white-space: pre-wrap; word-wrap: break-word; }
-        input       { font-size: 100%%; }
+        button      { font-size: 100%%; text-transform: capitalize; }
 
         /* -- heading ---------------------------------------------------------------------- */
         h1                   { font-size: 150%%; color: #34495e; }
@@ -599,10 +597,10 @@ html_template = r"""<!DOCTYPE html>
                     <tr>
                         <th>Test Module/Test Class/Test Case</th>
                         <th>Count</th>
-                        <th>PASS</th>
-                        <th>FAIL</th>
-                        <th>ERROR</th>
-                        <th>SKIP</th>
+                        <th>Pass</th>
+                        <th>Fail</th>
+                        <th>Error</th>
+                        <th>Skip</th>
                         <th>Duration</th>
                         <th><a id="reportLog" href="javascript:showLog(null, null, null)">Log</a></th>
                     </tr>
@@ -1043,7 +1041,7 @@ class SQLiteTestRunner(object):
             conn.commit()
             for test_module in rerun_test_list:
                 rerun_test_suite.addTests(unittest.defaultTestLoader.loadTestsFromModule(
-                    sys.modules[test_module]))
+                    sys.modules[test_module[0]]))
         elif self.rerun_level == 'class':
             rerun_test_list = conn.execute(
                 select_rerun_class.format(','.join(['?'] * len(self.rerun_status))),

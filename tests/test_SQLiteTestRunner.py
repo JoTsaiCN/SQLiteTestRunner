@@ -14,6 +14,6 @@ if __name__ == '__main__':
                               )
     runner.run(suite)
     runner = SQLiteTestRunner(db='test_result.db', html='test_report.html', descriptions='Test Report'
-                              , rerun=True, rerun_status=('error', 'fail'), rerun_level='method'
+                              , rerun=True, rerun_status=('error', 'fail'), rerun_level='module'
                               )
     runner.run(suite)
