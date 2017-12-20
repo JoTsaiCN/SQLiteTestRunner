@@ -13,5 +13,6 @@ setup(
     url="https://github.com/JoTsaiCN/SQLiteTestRunner",
     license="MIT license",
     packages=find_packages(exclude=("tests",)),
-    test_suite="tests"
+    test_suite="tests",
+    install_requires=['jinja2']
 )
