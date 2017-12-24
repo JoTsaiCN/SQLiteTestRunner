@@ -17,6 +17,8 @@ test_log_gap_tips = """
 ...
 
 """
+rerun_split = """====================================================================================================
+"""
 
 
 initial_case_sql = """
@@ -30,11 +32,14 @@ initial_case_sql = """
         message TEXT,
         startTime TEXT,
         endTime TEXT,
-        logs TEXT
+        logs TEXT,
+        history TEXT,
+        changelog TEXT
     )"""
 # Add and update info of a test case
 insertion_case_sql = """
-    INSERT INTO testcase (module, class, method, origin, description, logs) VALUES (?, ?, ?, ?, ?, '')"""
+    INSERT INTO testcase (module, class, method, origin, description, logs, history, changelog) 
+    VALUES (?, ?, ?, ?, ?, '', '', '')"""
 update_case_origin_sql = """
     UPDATE testcase SET message=? WHERE module=? AND class=? AND method=?"""
 update_case_start_sql = """
@@ -49,7 +54,7 @@ update_case_log_sql = """
     UPDATE testcase SET logs=logs||? WHERE module=? AND class=? AND method=?"""
 # Add and update info of a test class
 insertion_cls_sql = """
-    INSERT INTO testcase (module, class, description, logs) SELECT * FROM (SELECT ?, ?, ?, '') AS tmp 
+    INSERT INTO testcase (module, class, description, logs, history) SELECT * FROM (SELECT ?, ?, ?, '', '') AS tmp 
     WHERE NOT EXISTS (SELECT module, class FROM testcase WHERE module=? AND class=?) LIMIT 1;"""
 update_cls_start_sql = """
     UPDATE testcase SET startTime=? WHERE module=? AND class=? AND method IS NULL AND startTime IS NULL"""
@@ -61,7 +66,7 @@ update_cls_log_sql = """
     UPDATE testcase SET logs=logs||? WHERE module=? AND class=? AND method IS NULL"""
 # Add and update info of a test module
 insertion_mod_sql = """
-    INSERT INTO testcase (module, description, logs) SELECT * FROM (SELECT ?, ?, '') AS tmp 
+    INSERT INTO testcase (module, description, logs, history) SELECT * FROM (SELECT ?, ?, '', '') AS tmp 
     WHERE NOT EXISTS (SELECT module FROM testcase WHERE module=?) LIMIT 1;"""
 update_mod_start_sql = """
     UPDATE testcase SET startTime=? WHERE module=? AND class IS NULL AND method IS NULL AND startTime IS NULL"""
@@ -73,7 +78,7 @@ update_mod_log_sql = """
     UPDATE testcase SET logs=logs||? WHERE module=? AND class IS NULL AND method IS NULL"""
 # Add and update info of whole test
 insertion_test_sql = """
-    INSERT INTO testcase (description, logs) SELECT * FROM (SELECT ?, '') AS tmp 
+    INSERT INTO testcase (description, logs, history) SELECT * FROM (SELECT ?, '', '') AS tmp 
     WHERE NOT EXISTS (SELECT module FROM testcase WHERE module IS NULL) LIMIT 1;"""
 update_test_start_sql = """
     UPDATE testcase SET startTime=? WHERE module IS NULL AND class IS NULL AND method IS NULL AND startTime IS NULL"""
@@ -102,6 +107,27 @@ update_test_case_method = """
 update_parameterized_method = """
     UPDATE testcase SET method=?, description=?, result=NULL, startTime=NULL 
     WHERE module=? AND class=? AND method=? AND origin=?"""
+# Update test history for rerun
+select_test_info_sql = """
+    SELECT MAX(endTime) FROM testcase"""
+update_test_history_sql = """
+    UPDATE testcase SET history=history||? WHERE module IS NULL AND class IS NULL AND method IS NULL"""
+select_mod_info_sql = """
+    SELECT MAX(endTime) FROM testcase WHERE module=?"""
+update_mod_history_sql = """
+    UPDATE testcase SET history=history||? WHERE module=? AND class IS NULL AND method IS NULL"""
+select_cls_info_sql = """
+    SELECT MAX(endTime) FROM testcase WHERE module=? AND class=?"""
+update_cls_history_sql = """
+    UPDATE testcase SET history=history||? WHERE module=? AND class=? AND method IS NULL"""
+select_case_info_sql = """
+    SELECT method, description, startTime, endTime, result FROM testcase 
+    WHERE module=? AND class=? AND method=?"""
+update_case_history_sql = """
+    UPDATE testcase SET history=history||? WHERE module=? AND class=? AND method=?"""
+update_case_change_sql = """
+    UPDATE testcase SET changelog=changelog||? FROM testcase 
+    WHERE module=? AND class=? AND method=?"""
 
 
 class TestHandler(logging.Handler):
@@ -138,6 +164,10 @@ class TestHandler(logging.Handler):
         conn.execute(sql, tuple([self.logs_cache] + list(args)))
         conn.commit()
         self.logs_cache = ''
+        
+        
+def get_case_mod_cls_method(case):
+    return case.__module__, case.__class__.__name__, getattr(case, '_testMethodName')
 
 
 class SQLiteTestResult(unittest.TestResult):
@@ -177,42 +207,41 @@ class SQLiteTestResult(unittest.TestResult):
             return str(test)
 
     def startTest(self, test):
-        self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
-                         start=datetime.now())
+        self.update_case(*get_case_mod_cls_method(test), start=datetime.now())
         super(SQLiteTestResult, self).startTest(test)
     
     def stopTest(self, test):
         super(SQLiteTestResult, self).stopTest(test)
         TestHandler.get_handler().store_cache(
-            self.db, update_case_log_sql, (test.__module__, test.__class__.__name__, getattr(test, '_testMethodName')))
+            self.db, update_case_log_sql, get_case_mod_cls_method(test))
 
     def addSuccess(self, test):
-        self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
+        self.update_case(*get_case_mod_cls_method(test),
                          result='PASS', end=datetime.now())
         super(SQLiteTestResult, self).addSuccess(test)
 
     def addError(self, test, err):
-        self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
+        self.update_case(*get_case_mod_cls_method(test),
                          result='ERROR', end=datetime.now(), msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addError(test, err)
 
     def addFailure(self, test, err):
-        self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
+        self.update_case(*get_case_mod_cls_method(test),
                          result='FAIL', end=datetime.now(), msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addFailure(test, err)
 
     def addSkip(self, test, reason):
-        self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
+        self.update_case(*get_case_mod_cls_method(test),
                          result='SKIP', end=datetime.now(), msg=reason)
         super(SQLiteTestResult, self).addSkip(test, reason)
 
     def addExpectedFailure(self, test, err):
-        self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
+        self.update_case(*get_case_mod_cls_method(test),
                          result='FAIL', end=datetime.now(), msg=self._exc_info_to_string(err, test))
         super(SQLiteTestResult, self).addExpectedFailure(test, err)
 
     def addUnexpectedSuccess(self, test):
-        self.update_case(test.__module__, test.__class__.__name__, getattr(test, '_testMethodName'),
+        self.update_case(*get_case_mod_cls_method(test),
                          result='PASS', end=datetime.now())
         super(SQLiteTestResult, self).addUnexpectedSuccess(test)
 
@@ -256,11 +285,22 @@ class SQLiteTestSuite(unittest.TestSuite):
 
     def _handleClassSetUp(self, test, result):
         if getattr(result, '_previousTestClass', None) != test.__class__:
-            self.update_class(result.db, test.__class__, start=datetime.now())
+            start_time = datetime.now()
+            if result.rerun:
+                conn = sqlite3.connect(getattr(self, 'db'))
+                case_mod_cls_method = get_case_mod_cls_method(test)
+                cls_history = conn.execute(select_cls_info_sql, case_mod_cls_method[:2]).fetchall()
+                cls_last_history = cls_history[0][0] if cls_history[0][0] is not None else ''
+                conn.execute(update_cls_history_sql, (
+                    '|'.join([cls_last_history, start_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]]) + '\n',
+                    *case_mod_cls_method[:2]))
+                conn.execute(update_cls_log_sql, (rerun_split, *case_mod_cls_method[:2]))
+                conn.commit()
+            self.update_class(result.db, test.__class__, start=start_time)
         super(self.__class__, self)._handleClassSetUp(test, result)
         if getattr(result, '_previousTestClass', None) != test.__class__:
             TestHandler.get_handler().store_cache(
-                self.db, update_cls_log_sql, (test.__class__.__module__, test.__class__.__name__))
+                getattr(self, 'db'), update_cls_log_sql, (test.__class__.__module__, test.__class__.__name__))
 
     def _tearDownPreviousClass(self, test, result):
         super(self.__class__, self)._tearDownPreviousClass(test, result)
@@ -269,22 +309,35 @@ class SQLiteTestSuite(unittest.TestSuite):
         if previous_class and previous_class != test.__class__:
             self.update_class(result.db, previous_class, end=datetime.now())
             TestHandler.get_handler().store_cache(
-                self.db, update_cls_log_sql, (previous_class.__module__, previous_class.__name__), gap_tips=True)
+                getattr(self, 'db'), update_cls_log_sql,
+                (previous_class.__module__, previous_class.__name__), gap_tips=True)
 
     def _handleModuleFixture(self, test, result):
-        previousModule = self._get_previous_module(result)
+        previous_module = self._get_previous_module(result)
         super(self.__class__, self)._handleModuleFixture(test, result)
-        if test.__class__.__module__ and previousModule != test.__class__.__module__:
-            TestHandler.get_handler().store_cache(self.db, update_mod_log_sql, (test.__class__.__module__,))
+        if test.__class__.__module__ and previous_module != test.__class__.__module__:
+            TestHandler.get_handler().store_cache(
+                getattr(self, 'db'), update_mod_log_sql, (test.__class__.__module__,))
 
     def _handleModuleTearDown(self, result):
         super(self.__class__, self)._handleModuleTearDown(result)
-        previousModule = self._get_previous_module(result)
-        if previousModule and previousModule != result.currentModule:
-            self.update_module(result.db, previousModule, end=datetime.now())
-            TestHandler.get_handler().store_cache(self.db, update_mod_log_sql, (previousModule,), gap_tips=True)
-        if result.currentModule and previousModule != result.currentModule:
-            self.update_module(result.db, result.currentModule, start=datetime.now())
+        previous_module = self._get_previous_module(result)
+        if previous_module and previous_module != result.currentModule:
+            self.update_module(result.db, previous_module, end=datetime.now())
+            TestHandler.get_handler().store_cache(
+                getattr(self, 'db'), update_mod_log_sql, (previous_module,), gap_tips=True)
+        if result.currentModule and previous_module != result.currentModule:
+            start_time = datetime.now()
+            if result.rerun:
+                conn = sqlite3.connect(getattr(self, 'db'))
+                mod_history = conn.execute(select_mod_info_sql, (result.currentModule,)).fetchall()
+                mod_last_history = mod_history[0][0] if mod_history[0][0] is not None else ''
+                conn.execute(update_mod_history_sql, (
+                    '|'.join([mod_last_history, start_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]]) + '\n',
+                    result.currentModule))
+                conn.execute(update_mod_log_sql, (rerun_split, result.currentModule))
+                conn.commit()
+            self.update_module(result.db, result.currentModule, start=start_time)
 
     @classmethod
     def alter_super_class(cls, suite_cls):
@@ -295,7 +348,7 @@ class SQLiteTestSuite(unittest.TestSuite):
         for test in self._tests:
             if not isnotsuite(test):
                 test.__class__ = self.__class__
-                test.db = self.db
+                test.db = getattr(self, 'db')
                 test.alter_suite_class()
 
 
@@ -324,7 +377,7 @@ class SQLiteTestRunner(object):
         if resultclass is not None:
             self.resultclass = resultclass
 
-    def _makeResult(self):
+    def _make_result(self):
         return self.resultclass(self.db, self.descriptions)
 
     def alter_suite_class(self, test):
@@ -344,7 +397,7 @@ class SQLiteTestRunner(object):
                         case.__module__, case.__class__.__name__, case.__class__.__doc__,
                         case.__module__, case.__class__.__name__))
                     conn.execute(insertion_case_sql, (
-                        case.__module__, case.__class__.__name__, getattr(case, '_testMethodName'),
+                        *get_case_mod_cls_method(case),
                         self.get_origin_method_from_case(case), case.shortDescription()))
                 else:
                     self.add_case(conn, case)
@@ -374,10 +427,12 @@ class SQLiteTestRunner(object):
             return test_method.__name__
 
     @classmethod
-    def is_parameterized_case(self, test_case):
+    def is_parameterized_case(cls, test_case):
         test_method = getattr(test_case.__class__, getattr(test_case, '_testMethodName'))
-        return test_method.__closure__ is not None and test_method.__closure__[
-                                                           0].cell_contents.__name__ != test_method.__name__
+        if test_method.__closure__ is not None:
+            if test_method.__closure__[0].cell_contents.__name__ != test_method.__name__:
+                return True
+        return False
 
     def prepare_db_for_rerun(self, conn, test_suite):
         if isinstance(test_suite, unittest.TestSuite) and len(getattr(test_suite, '_tests')) > 0:
@@ -386,15 +441,21 @@ class SQLiteTestRunner(object):
                 if isinstance(case, unittest.TestSuite):
                     self.prepare_db_for_rerun(conn, case)
                 else:
+                    case_mod_cls_method = get_case_mod_cls_method(case)
+                    # save last execution information to history
+                    case_history = conn.execute(select_case_info_sql, case_mod_cls_method).fetchall()
+                    case_last_history = [field if field is not None else '' for field in case_history[0]]
+                    conn.execute(update_case_history_sql,
+                                 ('|'.join(case_last_history) + '\n', *case_mod_cls_method))
+                    conn.execute(update_case_log_sql, (rerun_split, *case_mod_cls_method))
+                    # clear last execution
                     if self.is_parameterized_case(case):
-                        case_dict_key = '-'.join(
-                            [case.__module__, case.__class__.__name__, self.get_origin_method_from_case(case)])
+                        case_dict_key = '-'.join([*case_mod_cls_method[:2], self.get_origin_method_from_case(case)])
                         if rerun_parameterized_case.get(case_dict_key) is None:
                             rerun_parameterized_case[case_dict_key] = list()
                         rerun_parameterized_case[case_dict_key].append(case)
                     else:
-                        conn.execute(update_test_case_method,
-                                     (case.__module__, case.__class__.__name__, getattr(case, '_testMethodName')))
+                        conn.execute(update_test_case_method, case_mod_cls_method)
             for method, cases in rerun_parameterized_case.items():
                 db_cases = conn.execute(select_parameterized_method, tuple(method.split('-'))).fetchall()
                 for db_case, case in list(zip(db_cases, cases)):
@@ -409,7 +470,6 @@ class SQLiteTestRunner(object):
             rerun_test_list = conn.execute(
                 select_rerun_module.format(','.join(['?'] * len(self.rerun_status))),
                 self.rerun_status).fetchall()
-            conn.commit()
             for test_module in rerun_test_list:
                 rerun_test_suite.addTests(unittest.defaultTestLoader.loadTestsFromModule(
                     sys.modules[test_module[0]]))
@@ -417,7 +477,6 @@ class SQLiteTestRunner(object):
             rerun_test_list = conn.execute(
                 select_rerun_class.format(','.join(['?'] * len(self.rerun_status))),
                 self.rerun_status).fetchall()
-            conn.commit()
             for test_module, test_class in rerun_test_list:
                 rerun_test_suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(
                     getattr(sys.modules[test_module], test_class)))
@@ -426,8 +485,9 @@ class SQLiteTestRunner(object):
                 select_rerun_class.format(','.join(['?'] * len(self.rerun_status))),
                 self.rerun_status).fetchall()
             rerun_test_list = conn.execute(
-                select_rerun_method.format(','.join(['?'] * len(self.rerun_status))), self.rerun_status).fetchall()
-            conn.commit()
+                select_rerun_method.format(','.join(['?'] * len(self.rerun_status))),
+                self.rerun_status).fetchall()
+
             # Get case from test class
             for test_module, test_class in class_list:
                 test_class_cases = unittest.defaultTestLoader.loadTestsFromTestCase(
@@ -441,8 +501,14 @@ class SQLiteTestRunner(object):
                     getattr(test_class_cases, '_tests').remove(case)
                 rerun_test_suite.addTests(test_class_cases)
         else:
+            conn.commit()
             raise ValueError('No such rerun level, must be module, class or method')
-        conn = sqlite3.connect(self.db)
+        # save the gap
+        case_history = conn.execute(select_test_info_sql).fetchall()
+        case_last_history = case_history[0][0] if case_history[0][0] is not None else ''
+        conn.execute(update_test_history_sql, ('|'.join(
+            [case_last_history, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]]) + '\n',))
+        conn.execute(update_test_log_sql, (rerun_split,))
         self.prepare_db_for_rerun(conn, rerun_test_suite)
         conn.commit()
         rerun_test_suite.db = self.db
@@ -464,11 +530,12 @@ class SQLiteTestRunner(object):
     def run(self, test):
         """Run the given test case or test suite."""
         TestHandler.get_handler()
-        result = self._makeResult()
+        result = self._make_result()
         unittest.signals.registerResult(result)
         result.failfast = self.failfast
         result.buffer = self.buffer
         result.tb_locals = self.tb_locals
+        result.rerun = self.rerun
         with warnings.catch_warnings():
             if self.warnings:
                 warnings.simplefilter(self.warnings)
@@ -488,17 +555,17 @@ class SQLiteTestRunner(object):
                 with open(self.html, 'w', encoding='utf-8') as report_html:
                     report_html.write(report_template.render(**html_tmpl_dict))
                 self.init_db_case_list(test_suite)
-                self.update_report(start=datetime.now())
+            self.update_report(start=datetime.now())
             TestHandler.get_handler().store_cache(self.db, update_test_log_sql, tuple())
-            startTestRun = getattr(result, 'startTestRun', None)
-            if startTestRun is not None:
-                startTestRun()
+            start_test_run = getattr(result, 'startTestRun', None)
+            if start_test_run is not None:
+                start_test_run()
             try:
                 test_suite(result)
             finally:
-                stopTestRun = getattr(result, 'stopTestRun', None)
-                if stopTestRun is not None:
-                    stopTestRun()
+                stop_test_run = getattr(result, 'stopTestRun', None)
+                if stop_test_run is not None:
+                    stop_test_run()
             self.update_report(end=datetime.now())
         TestHandler.get_handler().store_cache(self.db, update_test_log_sql, tuple(), gap_tips=True)
         return result

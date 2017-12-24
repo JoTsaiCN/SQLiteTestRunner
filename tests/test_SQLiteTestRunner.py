@@ -17,3 +17,15 @@ if __name__ == '__main__':
                               , rerun=True, rerun_status=('error', 'fail'), rerun_level='module'
                               )
     runner.run(suite)
+    runner = SQLiteTestRunner(db='test_result.db', html='test_report.html', descriptions='Test Report'
+                              , rerun=True, rerun_status=('error', 'fail'), rerun_level='class'
+                              )
+    runner.run(suite)
+    runner = SQLiteTestRunner(db='test_result.db', html='test_report.html', descriptions='Test Report'
+                              , rerun=True, rerun_status=('error', 'fail'), rerun_level='method'
+                              )
+    runner.run(suite)
+    runner = SQLiteTestRunner(db='test_result.db', html='test_report.html', descriptions='Test Report'
+                              , rerun=True, rerun_status=('error', 'fail', 'skip'), rerun_level='method'
+                              )
+    runner.run(suite)

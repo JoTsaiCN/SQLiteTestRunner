@@ -14,31 +14,40 @@
     start = 7;
     end = 8;
     logs = 9;
+    case_history = 10;
+    change = 11;
 
-    function calculateDuration(start, end) {
+    function calculateDuration(start, end, gaps) {
         if(start === null) {
             return 'Not Execute';
         }
         if(end === null) {
             return 'Interruption';
         }
-        duration_num = new Date(end) - new Date(start);
-        second_gap = 1000;
-        minute_gap = 60 * second_gap;
-        hour_gap = 60 * minute_gap;
-        day_gap = 24 * hour_gap;
-        days = Math.floor(duration_num / day_gap);
-        hours = Math.floor((duration_num % day_gap) / hour_gap);
-        minutes = Math.floor((duration_num % hour_gap) / minute_gap);
-        seconds = Math.floor((duration_num % minute_gap) / second_gap);
-        micro_seconds = duration_num % 1000;
-        duration_str = '';
+        var duration_num = new Date(end) - new Date(start);
+        if(gaps !== '' && gaps !== null) {
+            var gap_list = gaps.split('\n');
+            for (var i = 0; i < gap_list.length-1; i++) {
+                var gap_pair = gap_list[i].split('|');
+                duration_num = duration_num - (new Date(gap_pair[1]) - new Date(gap_pair[0]));
+            }
+        }
+        var second_gap = 1000;
+        var minute_gap = 60 * second_gap;
+        var hour_gap = 60 * minute_gap;
+        var day_gap = 24 * hour_gap;
+        var days = Math.floor(duration_num / day_gap);
+        var hours = Math.floor((duration_num % day_gap) / hour_gap);
+        var minutes = Math.floor((duration_num % hour_gap) / minute_gap);
+        var seconds = Math.floor((duration_num % minute_gap) / second_gap);
+        var micro_seconds = duration_num % 1000;
+        var duration_str = '';
         if (days > 0) duration_str += days + 'd';
         if (hours > 0) duration_str += hours + 'h';
         if (minutes > 0) duration_str += minutes + 'm';
         if (seconds > 0) duration_str += seconds + 's';
         if (micro_seconds > 0) duration_str += micro_seconds + 'ms';
-        if (micro_seconds == 0 && duration_str == '') duration_str = '<1ms';
+        if (micro_seconds === 0 && duration_str === '') duration_str = '<1ms';
         return duration_str
     }
 
@@ -48,12 +57,12 @@
         xhr.responseType = "arraybuffer";
         xhr.onload = function() {
             var data = new Uint8Array(xhr.response);
-            var arr = new Array();
-            for(var i = 0; i != data.length; ++i) arr[i] = String.fromCharCode(data[i]);
+            var arr = [];
+            for(var i = 0; i !== data.length; ++i) arr[i] = String.fromCharCode(data[i]);
             success(arr.join(""));
         };
         xhr.send();
-    };
+    }
 
     function init(){
         datatable = document.getElementById('result_table');
@@ -67,35 +76,35 @@
     }
 
     function showStatusCase(case_result) {
-        case_list = document.getElementsByClassName(case_result.toLowerCase() + 'Case');
+        var case_list = document.getElementsByClassName(case_result.toLowerCase() + 'Case');
         for(var i=0; i<case_list.length; i++) {
             case_list[i].style.display = "";
         }
         if(case_list.length > 0) {
-            button = document.getElementById(case_result.toLowerCase() + 'Button');
+            var button = document.getElementById(case_result.toLowerCase() + 'Button');
             button.className = case_result.toLowerCase() + 'Button';
-            if(document.getElementsByClassName('disableButton').length == 1) {
+            if(document.getElementsByClassName('disableButton').length === 1) {
                 document.getElementById('allButton').className = 'allButton';
             }
         }
     }
 
     function hideStatusCase(case_result) {
-        case_list = document.getElementsByClassName(case_result + 'Case');
+        var case_list = document.getElementsByClassName(case_result + 'Case');
         for(var i=0; i<case_list.length; i++) {
             case_list[i].style.display = 'none';
         }
         if(case_list.length > 0) {
-            button = document.getElementById(case_result.toLowerCase() + 'Button');
+            var button = document.getElementById(case_result.toLowerCase() + 'Button');
             button.className = 'disableButton';
             document.getElementById('allButton').className = 'disableButton';
         }
     }
 
     function changeCaseDisplay(case_result) {
-        if(case_result.toLowerCase() == 'all'){
-            button = document.getElementById('allButton');
-            if(button.className == 'disableButton') {
+        if(case_result.toLowerCase() === 'all'){
+            var button = document.getElementById('allButton');
+            if(button.className === 'disableButton') {
                 showStatusCase('error');
                 showStatusCase('fail');
                 showStatusCase('skip');
@@ -107,7 +116,7 @@
                 hideStatusCase('pass');
             }
         } else {
-            if(document.getElementById(case_result.toLowerCase() + 'Button').className == 'disableButton') {
+            if(document.getElementById(case_result.toLowerCase() + 'Button').className === 'disableButton') {
                 showStatusCase(case_result.toLowerCase());
             } else {
                 hideStatusCase(case_result.toLowerCase());
@@ -122,19 +131,19 @@
             var sql_result = db.exec("SELECT result, COUNT(*) AS count FROM testcase " +
                                      "WHERE module='" + module + "' " + "AND class IS NOT NULL " +
                                      "AND method IS NOT NULL GROUP BY result");
-            result_count = 0;
-            error_count = 0;
+            var result_count = 0;
+            var error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
-                 if (sql_result[0].values[i][0] == 'PASS') {
+                 if (sql_result[0].values[i][0] === 'PASS') {
                     pass.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'SKIP') {
+                 if (sql_result[0].values[i][0] === 'SKIP') {
                     skip.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'FAIL') {
+                 if (sql_result[0].values[i][0] === 'FAIL') {
                     failed.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] === null) {
+                 if (sql_result[0].values[i][0] === 'ERROR' || sql_result[0].values[i][0] === null) {
                     error.innerHTML += sql_result[0].values[i][1];
                  }
                  result_count += sql_result[0].values[i][1];
@@ -162,19 +171,19 @@
             var sql_result = db.exec("SELECT result, COUNT(*) AS count FROM testcase " +
                                      "WHERE module='" + module + "' " + "AND class='" + case_class + "' " +
                                      "AND method IS NOT NULL GROUP BY result");
-            result_count = 0;
-            error_count = 0;
+            var result_count = 0;
+            var error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
-                 if (sql_result[0].values[i][0] == 'PASS') {
+                 if (sql_result[0].values[i][0] === 'PASS') {
                     pass.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'SKIP') {
+                 if (sql_result[0].values[i][0] === 'SKIP') {
                     skip.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'FAIL') {
+                 if (sql_result[0].values[i][0] === 'FAIL') {
                     failed.innerHTML = sql_result[0].values[i][1];
                  }
-                 if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] === null) {
+                 if (sql_result[0].values[i][0] === 'ERROR' || sql_result[0].values[i][0] === null) {
                     error_count += sql_result[0].values[i][1];
                  }
                  result_count += sql_result[0].values[i][1];
@@ -198,23 +207,23 @@
     function showResult(row){
         document.title = row[desc];
         document.getElementById('title').innerHTML =  row[desc];
-        start_time = document.getElementById('StartTime');
-        start_time.innerHTML += row[start];
-        end_time = document.getElementById('EndTime');
-        end_time.innerHTML += row[end];
-        test_duration = document.getElementById('Duration');
-        test_duration.innerHTML += calculateDuration(row[start], row[end]);
+        var start_time = document.getElementById('StartTime');
+        start_time.textContent = row[start];
+        var end_time = document.getElementById('EndTime');
+        end_time.textContent = row[end];
+        var test_duration = document.getElementById('Duration');
+        test_duration.textContent = calculateDuration(row[start], row[end], row[case_history]);
         loadBinaryFile(result_db, function(data){
             var db = new SQL.Database(data);
             // Database is ready
             var sql_result = db.exec("SELECT result, COUNT(*) AS count FROM testcase " +
                                      "WHERE module IS NOT NULL AND class IS NOT NULL " +
                                      "AND method IS NOT NULL GROUP BY result");
-            var status_arr = new Array();
-            result_count = 0;
-            error_count = 0;
+            var status_arr = [];
+            var result_count = 0;
+            var error_count = 0;
             for(var i=0; i<sql_result[0].values.length; i++){
-                if (sql_result[0].values[i][0] == 'ERROR' || sql_result[0].values[i][0] === null) {
+                if (sql_result[0].values[i][0] === 'ERROR' || sql_result[0].values[i][0] === null) {
                     error_count += sql_result[0].values[i][1];
                 } else {
                     status_arr.push(sql_result[0].values[i][0] + ' ' + sql_result[0].values[i][1]);
@@ -224,14 +233,14 @@
             if(error_count > 0) {
                 status_arr.push('ERROR ' + error_count);
             }
-            button = document.createElement('button');
-            button.id = 'allButton';
-            button.className = 'allButton';
-            button.textContent = 'Total ' + result_count;
-            button.onclick = Function("changeCaseDisplay('All');");
-            document.getElementById('Status').appendChild(button);
+            var allButton = document.createElement('button');
+            allButton.id = 'allButton';
+            allButton.className = 'allButton';
+            allButton.textContent = 'Total ' + result_count;
+            allButton.onclick = Function("changeCaseDisplay('All');");
+            document.getElementById('Status').appendChild(allButton);
             for(var i=0; i<status_arr.length; i++) {
-                button = document.createElement('button');
+                var button = document.createElement('button');
                 button.id = status_arr[i].split(' ')[0].toLowerCase() + 'Button';
                 button.className = status_arr[i].split(' ')[0].toLowerCase() + 'Button';
                 button.textContent = status_arr[i].toLowerCase();
@@ -256,14 +265,14 @@
         var failed = document.createElement('td');
         var error = document.createElement('td');
         var skip = document.createElement('td');
-        getModuleResultCount(row[module], count, pass, failed, error, skip, tr)
+        getModuleResultCount(row[module], count, pass, failed, error, skip, tr);
         var duration = document.createElement('td');
-        duration.innerHTML = calculateDuration(row[start], row[end]);
-        var mod_modify = document.createElement('td');
-        var mod_log_link = document.createElement('a')
+        duration.innerHTML = calculateDuration(row[start], row[end], row[case_history]);
+        var mod_detail = document.createElement('td');
+        var mod_log_link = document.createElement('a');
         mod_log_link.innerHTML = 'View Log';
         mod_log_link.href = 'javascript:showLog("' + row[module] + '", null, null)';
-        mod_modify.appendChild(mod_log_link);
+        mod_detail.appendChild(mod_log_link);
 
         tr.appendChild(mod_name);
         tr.appendChild(count);
@@ -272,7 +281,7 @@
         tr.appendChild(error);
         tr.appendChild(skip);
         tr.appendChild(duration);
-        tr.appendChild(mod_modify);
+        tr.appendChild(mod_detail);
 
         datatable.appendChild(tr);
     }
@@ -290,14 +299,14 @@
         var failed = document.createElement('td');
         var error = document.createElement('td');
         var skip = document.createElement('td');
-        getClassResultCount(row[module], row[case_class], count, pass, failed, error, skip, tr)
+        getClassResultCount(row[module], row[case_class], count, pass, failed, error, skip, tr);
         var duration = document.createElement('td');
-        duration.innerHTML = calculateDuration(row[start], row[end]);
-        var cls_modify = document.createElement('td');
-        var cls_log_link = document.createElement('a')
+        duration.innerHTML = calculateDuration(row[start], row[end], row[case_history]);
+        var cls_detail = document.createElement('td');
+        var cls_log_link = document.createElement('a');
         cls_log_link.innerHTML = 'View Log';
         cls_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", null)';
-        cls_modify.appendChild(cls_log_link);
+        cls_detail.appendChild(cls_log_link);
 
         tr.appendChild(cls_name);
         tr.appendChild(count);
@@ -306,7 +315,7 @@
         tr.appendChild(error);
         tr.appendChild(skip);
         tr.appendChild(duration);
-        tr.appendChild(cls_modify);
+        tr.appendChild(cls_detail);
 
         datatable.appendChild(tr);
     }
@@ -323,16 +332,16 @@
         var case_result = document.createElement('td');
         case_result.colSpan = 5;
         case_result.align = 'center';
-        var case_modify_link = document.createElement('a')
-        case_modify_link.innerHTML = row[result];
-        case_modify_link.href = 'javascript:showModify("' + row[module] + '", "' +
+        var case_detail_link = document.createElement('a');
+        case_detail_link.innerHTML = row[result];
+        case_detail_link.href = 'javascript:showDetail("' + row[module] + '", "' +
                              row[case_class] + '", "' + row[method] + '")';
-        case_result.appendChild(case_modify_link);
+        case_result.appendChild(case_detail_link);
         var duration = document.createElement('td');
-        duration.innerHTML = calculateDuration(row[start], row[end]);
+        duration.innerHTML = calculateDuration(row[start], row[end], '');
         var case_log_td = document.createElement('td');
         case_log_td.align = 'center';
-        var case_log_link = document.createElement('a')
+        var case_log_link = document.createElement('a');
         case_log_link.innerHTML = 'View Log';
         case_log_link.href = 'javascript:showLog("' + row[module] + '", "' + row[case_class] + '", "'
                              + row[method] + '")';
@@ -343,11 +352,11 @@
         tr.appendChild(duration);
         tr.appendChild(case_log_td);
 
-        if (row[result].toUpperCase() == 'ERROR') {
+        if (row[result].toUpperCase() === 'ERROR') {
             tr.className = 'errorCase';
-        } else if (row[result].toUpperCase() == 'FAIL') {
+        } else if (row[result].toUpperCase() === 'FAIL') {
             tr.className = 'failCase';
-        } else if (row[result].toUpperCase() == 'SKIP') {
+        } else if (row[result].toUpperCase() === 'SKIP') {
             tr.className = 'skipCase';
         } else {
             tr.className = 'passCase';
@@ -373,7 +382,7 @@
     }
 
     function showAllData(){
-        resultDiv = document.getElementById('result_div');
+        var resultDiv = document.getElementById('result_div');
         resultDiv.style.height = (window.innerHeight - resultDiv.getBoundingClientRect()['y'] - 20) + 'px';
         loadBinaryFile(result_db, function(data){
             var db = new SQL.Database(data);
@@ -419,10 +428,110 @@
         showMask();
     }
 
-    function showModify(module_str, class_str, method_str) {
-        document.getElementById('modifyDiv').style.display = 'block';
-        document.getElementById('modify_title').innerHTML = 'Modify: ' + module_str + '.' +
-                                                            class_str + '.' + method_str;
+    function showDetail(module_str, class_str, method_str) {
+        document.getElementById('detailDiv').style.display = 'block';
+        document.getElementById('detail_title').innerHTML = 'Detail: ' + module_str + '.' + class_str + '.' + method_str;
+        document.getElementById('case_detail').style.height = (
+            document.getElementById('detailDiv').clientHeight
+            - window.getComputedStyle(document.getElementsByClassName('divHeader')[0], null)['height'].replace('px', '')
+            ) + 'px';
+        document.getElementById('detail_table').style.width = (document.getElementById('case_detail').clientWidth - 40) + 'px';
+        document.getElementById('detail_method').textContent = method_str;
+        document.getElementById('detail_module').textContent = module_str;
+        document.getElementById('detail_class').textContent = class_str;
+        loadBinaryFile(result_db, function(data){
+            var db = new SQL.Database(data);
+            // Database is ready
+            var sql_result = db.exec("SELECT * FROM testcase " +
+                                 "WHERE module='" + module_str + "' AND class='" + class_str +
+                                 "' AND method='" + method_str + "'");
+            var case_detail = sql_result[0].values[0];
+            document.getElementById('detail_origin').textContent = case_detail[origin];
+            document.getElementById('detail_result').textContent = case_detail[result];
+            document.getElementById('detail_duration').textContent = calculateDuration(case_detail[start], case_detail[end], '');
+            document.getElementById('detail_start').textContent = case_detail[start];
+            document.getElementById('detail_end').textContent = case_detail[end];
+            if (case_detail[desc] === null || case_detail[desc].length === 0) {
+                document.getElementById('detail_description').textContent = 'No description.';
+            } else {
+                document.getElementById('detail_description').textContent = case_detail[desc];
+            }
+            if (case_detail[message] === null || case_detail[message].length === 0) {
+                document.getElementById('detail_message').textContent = 'No message.';
+            } else {
+                document.getElementById('detail_message').textContent = case_detail[message];
+            }
+            document.getElementById('detail_history').innerHTML = '';
+            var case_history_list = case_detail[case_history].split('\n');
+            if (case_detail[case_history] === '' || case_history_list.length === 0) {
+                document.getElementById('detail_history').innerHTML = "<pre>No execution history.</pre>";
+                document.getElementById('detail_history').style.paddingLeft = '20px';
+            } else {
+                document.getElementById('detail_history').style.paddingLeft = '0';
+                var history_table = document.createElement('table');
+                history_table.id = 'detail_history_table';
+                history_table.style.width = document.getElementById('detail_history').clientWidth + 'px';
+                var history_title_tr = document.createElement('tr');
+                var history_table_method = document.createElement('td');
+                history_table_method.textContent = 'Method';
+                var history_table_result = document.createElement('td');
+                history_table_result.textContent = 'Result';
+                var history_table_duration = document.createElement('td');
+                history_table_duration.textContent = 'Duration';
+                var history_table_start = document.createElement('td');
+                history_table_start.textContent = 'Start Time';
+                var history_table_end = document.createElement('td');
+                history_table_end.textContent = 'End Time';
+                history_title_tr.appendChild(history_table_method);
+                history_title_tr.appendChild(history_table_result);
+                history_title_tr.appendChild(history_table_duration);
+                history_title_tr.appendChild(history_table_start);
+                history_title_tr.appendChild(history_table_end);
+                history_table.appendChild(history_title_tr);
+                for (var i = 0; i < case_history_list.length-1; i++) {
+                    var history_info_list = case_history_list[i].split('|');
+                    var history_info_tr = document.createElement('tr');
+                    var history_method = document.createElement('td');
+                    history_method.textContent = history_info_list[0];
+                    var history_result = document.createElement('td');
+                    history_result.textContent = history_info_list[4];
+                    var history_duration = document.createElement('td');
+                    history_duration.textContent = calculateDuration(history_info_list[2], history_info_list[3], '');
+                    var history_start = document.createElement('td');
+                    history_start.textContent = history_info_list[2];
+                    var history_end = document.createElement('td');
+                    history_end.textContent = history_info_list[3];
+                    history_info_tr.appendChild(history_method);
+                    history_info_tr.appendChild(history_result);
+                    history_info_tr.appendChild(history_duration);
+                    history_info_tr.appendChild(history_start);
+                    history_info_tr.appendChild(history_end);
+                    history_table.appendChild(history_info_tr);
+
+                    if (history_info_list[1] !== '' && history_info_list[1] !== null) {
+                        var history_desc_tr = document.createElement('tr');
+                        var history_desc_td = document.createElement('td');
+                        history_desc_td.colSpan = 5;
+                        var history_desc = document.createElement('span');
+                        history_desc.textContent = 'Description: ' + history_info_list[1];
+                        history_desc_td.appendChild(history_desc);
+                        history_desc_tr.appendChild(history_desc_td);
+                        history_table.appendChild(history_desc_tr);
+                    }
+                }
+                document.getElementById('detail_history').appendChild(history_table);
+            }
+            document.getElementById('detail_changelog').innerHTML = '';
+            var case_change_list = case_detail[change].split('\n');
+            if (case_detail[change] === '' || case_change_list.length === 0) {
+                document.getElementById('detail_changelog').innerHTML = "<pre>No change log.</pre>";
+                document.getElementById('detail_changelog').style.paddingLeft = '20px';
+            } else {
+                console.log("do something")
+            }
+            document.getElementById('change_reason').style.width = (
+                document.getElementById('detail_history').clientWidth - 200) + 'px'
+        });
         showMask();
     }
 
@@ -435,8 +544,22 @@
 
     function hideDiv() {
         document.getElementById('logDiv').style.display = 'none';
-        document.getElementById('modifyDiv').style.display = 'none';
+        document.getElementById('detailDiv').style.display = 'none';
         document.getElementById('maskDiv').style.display = 'none';
+    }
+
+    function submit_modify() {
+        var detail_method = document.getElementById('detail_method').textContent;
+        var detail_class = document.getElementById('detail_class').textContent;
+        var detail_module = document.getElementById('detail_module').textContent;
+        var detail_result = document.getElementById('detail_result').textContent;
+        var change_result = document.getElementById('change_result').value;
+        var change_reason = document.getElementById('change_reason').value;
+        if(detail_result === change_result.toUpperCase()) {
+            alert("The modified result is the same as the original result!")
+        } else {
+            console.log("do something")
+        }
     }
 
 </script>
@@ -445,19 +568,59 @@
     <title>Test Report</title>
     <style type="text/css" media="screen">
         body        { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
-        table       { table-layout:fixed; }
-        pre         { margin-left: 20px; line-height: 200%; white-space: pre-wrap; word-wrap: break-word; }
+        table       { table-layout: fixed; }
         button      { font-size: 100%; text-transform: capitalize; }
 
         /* -- heading ---------------------------------------------------------------------- */
-        h1                   { font-size: 150%; color: #34495e; }
-        .heading             { margin-top: 0ex; margin-bottom: 1ex; }
-        .heading.attribute   { margin-top: 1ex; margin-bottom: 0; }
-        .heading.description { margin-top: 4ex; margin-bottom: 6ex; }
+        h1             { font-size: 150%; color: #34495e; }
+        .heading       { margin-top: 0; margin-bottom: 1px; }
+        .errorButton   { background-color: #c0392b; border: 1px solid white; }
+        .failButton    { background-color: #f39c12; border: 1px solid white; }
+        .skipButton    { background-color: #2980b9; border: 1px solid white; }
+        .passButton    { background-color: #27ae60; border: 1px solid white; }
+        .allButton     { background-color: #34495e; border: 1px solid white; color: white; }
+        .disableButton { background-color: #eaeded; color: #34495e; border: 1px solid white; }
 
         /* -- css div popup ----------------------------------------------------------------- */
+        #reportLog { color: white; }
+        #log_content {
+            margin-left: 20px;
+            line-height: 200%;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #detail_table {
+            margin-left: 20px;
+            margin-top: 10px;
+            border-collapse:separate;
+            border-spacing:0px 10px;
+        }
+        #detail_table td { word-wrap: break-word; }
+        #detail_message  { margin: 0; line-height: 200%; }
+        #detail_history_table {
+            border: 1px solid #34495e;
+            text-align: left;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        #detail_history_table tr:nth-child(1) td {
+            background-color: #eaeded;
+            color: #34495e;
+            font-size: 100%;
+            font-weight: bold;
+        }
+        #detail_history_table tr:nth-child(4n+4) { background: #eaeded; }
+        #detail_history_table tr:nth-child(4n+5) { background: #eaeded; }
+        #detail_history_table td { padding: 5px; font-size: 90%; }
+        .detail_history_desc     { margin: 10px; }
+        #maskDiv {
+            position: absolute;
+            background-color: #bebebe;
+            opacity: 0.5;
+            top: 0;
+            left: 0;
+        }
         .popDiv {
-            position: fixed;
             position: absolute;
             background-color: white;
             top: 10%;
@@ -466,18 +629,12 @@
             height: 80%;
             z-index: 999;
         }
-        #maskDiv {
-            position: absolute;
-            background-color: #bebebe;
-            opacity: 0.5;
-            top: 0px;
-            left: 0px;
-        }
-        #closeDiv{
+        .scrollBody { width: 100%; overflow-y: scroll; }
+        .closeDiv{
             cursor: pointer;
             position: absolute;
-            right: 0px;
-            top: 0px;
+            right: 0;
+            top: 0;
             width:60px;
             height:40px;
             border:2px black none;
@@ -506,23 +663,15 @@
         .failModule  { background-color: #f39c12; }
         .errorModule { background-color: #c0392b; }
         .skipModule  { background-color: #2980b9; }
-        .passClass  { background-color: #2ecc71; }
-        .failClass  { background-color: #f1c40f; }
-        .errorClass { background-color: #e74c3c; }
-        .skipClass  { background-color: #3498db; }
-        .passCase   { color: #000; }
-        .failCase   { color: #f39c12; font-weight: bold; }
-        .errorCase  { color: #c0392b; font-weight: bold; }
-        .skipCase   { color: #2980b9; font-weight: bold; }
+        .passClass   { background-color: #2ecc71; }
+        .failClass   { background-color: #f1c40f; }
+        .errorClass  { background-color: #e74c3c; }
+        .skipClass   { background-color: #3498db; }
+        .passCase    { color: #000; }
+        .failCase    { color: #f39c12; font-weight: bold; }
+        .errorCase   { color: #c0392b; font-weight: bold; }
+        .skipCase    { color: #2980b9; font-weight: bold; }
 
-        .errorButton { background-color: #c0392b; border: 1px solid; color: white;}
-        .failButton { background-color: #f39c12; border: 1px solid; color: white; }
-        .skipButton { background-color: #2980b9; border: 1px solid; color: white; }
-        .passButton {background-color: #27ae60; border: 1px solid; color: white; }
-        .allButton { background-color: #34495e; border: 1px solid; color: white; }
-        .disableButton { background-color: #eaeded; border: 1px solid; color: #34495e; border-color: white }
-
-        #reportLog { color: white; }
         .table-head {
             padding-right:17px;
             background-color:#34495e;
@@ -560,13 +709,15 @@
         }
     </style>
 </head>
-<body onload="javascript:init()">
+<body onload="init()">
     <div class='heading'>
         <h1 id="title">Test Report</h1>
-        <p class='attribute' id='StartTime'><strong>Start Time: </strong></p>
-        <p class='attribute' id='EndTime'><strong>End Time: </strong></p>
-        <p class='attribute' id='Duration'><strong>Duration: </strong></p>
-        <p class='attribute' id='Status'><strong>Status: </strong></p>
+        <p>
+            <strong>Start Time: </strong><span id='StartTime'></span><span>&nbsp;&nbsp;</span>
+            <strong>End Time: </strong><span id='EndTime'></span><span>&nbsp;&nbsp;</span>
+            <strong>Duration: </strong><span id='Duration'></span><span>&nbsp;&nbsp;</span>
+        </p>
+        <p id='Status'><strong>Status: </strong></p>
     </div>
     <div style="width: 100%;">
         <div class="table-head">
@@ -613,15 +764,56 @@
         </div>
     </div>
 </body>
-<div id="maskDiv" onclick="javascript:hideDiv()" style="display: none;"></div>
+<div id="maskDiv" onclick="hideDiv()" style="display: none;"></div>
 <div id="logDiv" class="popDiv" style="display: none;">
-    <div class="divHeader"><span id='log_title' class="divTitle"></span>
-        <button id="closeDiv" onclick="javascript:hideDiv()">✖</button></div>
-    <div id='case_log' style="width: 100%; overflow-y: scroll;"><pre id='log_content'></pre></div>
+    <div class="divHeader">
+        <span id='log_title' class="divTitle"></span>
+        <button class="closeDiv" onclick="hideDiv()">✖</button>
+    </div>
+    <div id='case_log' class="scrollBody">
+        <pre id='log_content'></pre>
+    </div>
 </div>
-<div id="modifyDiv" class="popDiv" style="display: none;">
-    <div class="divHeader"><span id='modify_title' class="divTitle"></span>
-        <button id="closeDiv" onclick="javascript:hideDiv()">✖</button></div>
-    <pre id='case_modify'></pre>
+<div id="detailDiv" class="popDiv" style="display: none;">
+    <div class="divHeader">
+        <span id='detail_title' class="divTitle"></span>
+        <button class="closeDiv" onclick="hideDiv()">✖</button>
+    </div>
+    <div id='case_detail' class="scrollBody">
+        <table id='detail_table'>
+            <tr><td><strong>Method: </strong><span id='detail_method'></span></td>
+                <td><strong>Module: </strong><span id='detail_module'></span></td>
+                <td><strong>Class: </strong><span id='detail_class'></span></td>
+                <td><strong>Origin: </strong><span id='detail_origin'></span></td>
+            </tr>
+            <tr><td><strong>Result: </strong><span id='detail_result'></span></td>
+                <td><strong>Duration: </strong><span id='detail_duration'></span></td>
+                <td><strong>Start Time: </strong><span id='detail_start'></span></td>
+                <td><strong>End Time: </strong><span id='detail_end'></span></td>
+            </tr>
+            <tr><td colspan="4"><strong>Description: </strong></td></tr>
+            <tr><td colspan="4" style="padding-left: 20px;"><pre id='detail_description'></pre></td></tr>
+            <tr><td colspan="4"><strong>Message: </strong></td></tr>
+            <tr><td colspan="4" style="padding-left: 20px;"><pre id='detail_message'></pre></td></tr>
+            <tr><td colspan="4"><strong>History: </strong></td></tr>
+            <tr><td colspan="4" id="detail_history"></td></tr>
+            <tr><td colspan="4"><strong>Change Log: </strong></td></tr>
+            <tr><td colspan="4" id='detail_changelog'></td></tr>
+            <tr><td colspan="4"><strong>Modify: </strong></td></tr>
+            <tr><td colspan="4" id='detail_change_form' style="padding-left: 20px">
+                <label>
+                    <select id="change_result">
+                        <option value="pass">Pass</option>
+                        <option value="skip">Skip</option>
+                        <option value="fail">Fail</option>
+                        <option value="error">Error</option>
+                    </select>
+                </label>
+                <label><input id="change_reason" placeholder="Modify reason..." maxlength="100">
+                </label>
+                <button class="allButton" onclick="submit_modify()">Submit</button>
+            </td></tr>
+        </table>
+    </div>
 </div>
 </html>
